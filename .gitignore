@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+data/incidents.db
+data/*.db
+.venv/
+venv/
+.vscode/
+.idea/
+*.egg-info/

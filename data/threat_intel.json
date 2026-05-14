@@ -1,0 +1,8 @@
+{
+  "203.0.113.50": {"country": "Russie", "reputation": "malicious", "tags": ["bruteforce", "ssh"]},
+  "203.0.113.99": {"country": "Russie", "reputation": "malicious", "tags": ["sql_injection", "scanner"]},
+  "185.220.101.45": {"country": "Allemagne", "reputation": "malicious", "tags": ["tor_exit", "bruteforce"]},
+  "45.142.212.61": {"country": "Pays-Bas", "reputation": "suspicious", "tags": ["scanner", "vps"]},
+  "198.51.100.23": {"country": "France", "reputation": "unknown", "tags": []},
+  "198.51.100.42": {"country": "USA", "reputation": "suspicious", "tags": ["web_scanner"]}
+}
