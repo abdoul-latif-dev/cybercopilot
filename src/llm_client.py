@@ -154,7 +154,6 @@ def analyze_incident(
     model_name = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
 
     _rate_limit()
-    STATS["calls"] += 1
 
     try:
         client = OpenAI(api_key=api_key)
@@ -169,6 +168,8 @@ def analyze_incident(
         )
         text = response.choices[0].message.content.strip()
 
+        # Compter uniquement les appels qui ont réellement abouti
+        STATS["calls"] += 1
         if response.usage:
             STATS["tokens_in"] += response.usage.prompt_tokens
             STATS["tokens_out"] += response.usage.completion_tokens
@@ -207,7 +208,6 @@ def chat(question: str, context: str = "", model: str | None = None) -> str:
     full_prompt = f"CONTEXTE :\n{context}\n\nQUESTION :\n{question}" if context else question
 
     _rate_limit()
-    STATS["calls"] += 1
 
     try:
         response = client.chat.completions.create(
@@ -218,6 +218,8 @@ def chat(question: str, context: str = "", model: str | None = None) -> str:
                 {"role": "user", "content": full_prompt},
             ],
         )
+        # Compter uniquement les appels qui ont réellement abouti
+        STATS["calls"] += 1
         if response.usage:
             STATS["tokens_in"] += response.usage.prompt_tokens
             STATS["tokens_out"] += response.usage.completion_tokens

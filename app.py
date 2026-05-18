@@ -276,9 +276,13 @@ def action_export() -> None:
         storage.close()
         return
     output = Prompt.ask(
-        "[cyan]Nom du fichier de sortie[/cyan]",
+        "[cyan]Nom du fichier de sortie[/cyan] [dim](appuyez Entrée pour 'rapport.md')[/dim]",
         default="rapport.md",
+        show_default=False,
     )
+    # S'assurer que le fichier a une extension .md
+    if not output.endswith(".md"):
+        output = output + ".md"
     lines = ["# Rapport d'incidents SOC", ""]
     for inc in incidents:
         recos = json.loads(inc["recommendation"]) if inc["recommendation"] else []

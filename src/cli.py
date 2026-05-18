@@ -96,7 +96,7 @@ def print_incidents_table(incidents: list[dict]) -> None:
     table = Table(title="Incidents enregistrés", show_lines=True)
     table.add_column("#", style="cyan", width=4)
     table.add_column("Sévérité", width=12)
-    table.add_column("Statut", width=14)
+    table.add_column("Statut", width=18, no_wrap=True)
     table.add_column("Type", style="white")
     table.add_column("IP source", style="magenta")
     table.add_column("Date", style="dim")
@@ -165,12 +165,16 @@ def prompt_incident_action(incident_id: int) -> tuple[str | None, str]:
 
     if choice == "1":
         note = Prompt.ask(
-            "[dim]Note optionnelle (action prise)[/dim]", default=""
+            "[dim]Note (laisser vide pour aucune note) — action prise[/dim]",
+            default="",
+            show_default=False,
         ).strip()
         return ("handled", note)
     if choice == "2":
         note = Prompt.ask(
-            "[dim]Note optionnelle (raison)[/dim]", default=""
+            "[dim]Note (laisser vide pour aucune note) — raison[/dim]",
+            default="",
+            show_default=False,
         ).strip()
         return ("false_positive", note)
     if choice == "3":
