@@ -29,6 +29,7 @@ SUSPICIOUS_PATHS = [
 # Seuils de détection
 BRUTE_FORCE_THRESHOLD = 5
 PORT_SCAN_THRESHOLD = 8
+DDOS_REQUEST_THRESHOLD = 30  # nombre de requêtes HTTP identiques depuis une même IP
 
 
 @dataclass
@@ -189,6 +190,30 @@ def detect_anomalous_hour(events: list[LogEvent]) -> list[Incident]:
     return incidents
 
 
+def detect_ddos(events: list[LogEvent]) -> list[Incident]:
+    """Détecte les attaques DDoS : volume massif de requêtes HTTP depuis une même IP."""
+    by_ip = defaultdict(list)
+    for ev in events:
+        if ev.event_type == "http_request":
+            by_ip[ev.source_ip].append(ev)
+
+    incidents = []
+    for ip, ev_list in by_ip.items():
+        if len(ev_list) >= DDOS_REQUEST_THRESHOLD:
+            targets = list({ev.target for ev in ev_list})
+            severity = "critical" if len(ev_list) > 100 else "high"
+            incidents.append(Incident(
+                attack_type="ddos",
+                source_ip=ip,
+                severity=severity,
+                count=len(ev_list),
+                targets=targets[:5],
+                time_range=(ev_list[0].timestamp, ev_list[-1].timestamp),
+                sample_logs=[ev.raw for ev in ev_list[:5]],
+            ))
+    return incidents
+
+
 def detect_all(events: list[LogEvent]) -> list[Incident]:
     """Lance toutes les détections sur la liste d'événements."""
     incidents = []
@@ -197,4 +222,5 @@ def detect_all(events: list[LogEvent]) -> list[Incident]:
     incidents.extend(detect_port_scan(events))
     incidents.extend(detect_admin_scanning(events))
     incidents.extend(detect_anomalous_hour(events))
+    incidents.extend(detect_ddos(events))
     return incidents

@@ -5,6 +5,7 @@ from src.detector import (
     detect_all,
     detect_anomalous_hour,
     detect_brute_force,
+    detect_ddos,
     detect_port_scan,
     detect_sql_injection,
 )
@@ -191,6 +192,56 @@ def test_detect_anomalous_hour_normal_time():
     ]
     incidents = detect_anomalous_hour(events)
     assert len(incidents) == 0
+
+
+# ────────────────────────────────────────────────────────────────────────
+# DDoS
+# ────────────────────────────────────────────────────────────────────────
+
+def test_detect_ddos_above_threshold():
+    events = [
+        LogEvent(
+            timestamp="t",
+            source_ip="45.142.99.10",
+            event_type="http_request",
+            target="/",
+            raw="raw",
+        )
+        for _ in range(35)
+    ]
+    incidents = detect_ddos(events)
+    assert len(incidents) == 1
+    assert incidents[0].attack_type == "ddos"
+    assert incidents[0].count == 35
+
+
+def test_detect_ddos_below_threshold():
+    events = [
+        LogEvent(
+            timestamp="t",
+            source_ip="1.2.3.4",
+            event_type="http_request",
+            target="/",
+            raw="raw",
+        )
+        for _ in range(10)
+    ]
+    assert detect_ddos(events) == []
+
+
+def test_detect_ddos_severity_critical():
+    events = [
+        LogEvent(
+            timestamp="t",
+            source_ip="45.142.99.10",
+            event_type="http_request",
+            target="/",
+            raw="raw",
+        )
+        for _ in range(150)
+    ]
+    incidents = detect_ddos(events)
+    assert incidents[0].severity == "critical"
 
 
 # ────────────────────────────────────────────────────────────────────────

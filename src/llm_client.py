@@ -48,6 +48,7 @@ def fallback_analysis(incident_data: dict) -> dict[str, Any]:
         "port_scan": f"Scan de ports détecté depuis {ip} sur {count} ports différents.",
         "admin_scanning": f"Tentatives d'accès à des chemins admin sensibles depuis {ip}.",
         "anomalous_hour": f"Activité détectée depuis {ip} à une heure anormale (entre 02h et 05h).",
+        "ddos": f"Attaque DDoS détectée depuis {ip}. {count} requêtes massives en un temps court.",
     }
     recos = {
         "brute_force_ssh": [
@@ -76,6 +77,13 @@ def fallback_analysis(incident_data: dict) -> dict[str, Any]:
             "Vérifier l'identité du compte ayant initié la connexion",
             "Comparer avec les habitudes de l'utilisateur",
             "Activer une alerte temps réel sur cette plage horaire",
+        ],
+        "ddos": [
+            f"Bloquer l'IP {ip} et tout son sous-réseau au niveau du firewall",
+            "Activer un service anti-DDoS (Cloudflare, AWS Shield, OVH)",
+            "Mettre en place du rate limiting au niveau applicatif",
+            "Augmenter temporairement les capacités du serveur",
+            "Analyser si d'autres IP du même botnet attaquent en parallèle",
         ],
     }
 

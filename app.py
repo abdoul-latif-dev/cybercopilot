@@ -49,15 +49,16 @@ def print_menu() -> None:
     table.add_row("1.", "🔍 Détecter des intrusions (brute force SSH)")
     table.add_row("2.", "💉 Détecter des injections SQL")
     table.add_row("3.", "🌐 Détecter un scan de ports")
-    table.add_row("4.", "🔄 Analyser tous les logs disponibles")
-    table.add_row("5.", "📋 Voir la liste des incidents détectés")
-    table.add_row("6.", "🔎 Voir le détail d'un incident")
-    table.add_row("7.", "💬 Discuter avec l'assistant")
-    table.add_row("8.", "📊 Statistiques (tokens, économies)")
-    table.add_row("9.", "📤 Exporter un rapport Markdown")
-    table.add_row("10.", "🗑️  Supprimer un incident (RGPD)")
-    table.add_row("11.", "🧹 Vider toute la base d'incidents")
-    table.add_row("12.", "🔐 Activer / désactiver l'anonymisation")
+    table.add_row("4.", "🚀 Détecter une attaque DDoS")
+    table.add_row("5.", "🔄 Analyser tous les logs disponibles")
+    table.add_row("6.", "📋 Voir la liste des incidents détectés")
+    table.add_row("7.", "🔎 Voir le détail d'un incident")
+    table.add_row("8.", "💬 Discuter avec l'assistant")
+    table.add_row("9.", "📊 Statistiques (tokens, économies)")
+    table.add_row("10.", "📤 Exporter un rapport Markdown")
+    table.add_row("11.", "🗑️  Supprimer un incident (RGPD)")
+    table.add_row("12.", "🧹 Vider toute la base d'incidents")
+    table.add_row("13.", "🔐 Activer / désactiver l'anonymisation")
     table.add_row("0.", "🚪 Quitter")
 
     console.print(Panel(table, title="[bold]Menu principal[/bold]", border_style="blue"))
@@ -139,9 +140,15 @@ def action_detect_scan(anonymize: bool) -> None:
     analyze_log_file("firewall.log", anonymize)
 
 
+def action_detect_ddos(anonymize: bool) -> None:
+    console.print("\n[bold yellow]🚀 Détection d'attaque DDoS[/bold yellow]")
+    console.print("[dim]Source : data/logs/ddos-access.log[/dim]\n")
+    analyze_log_file("ddos-access.log", anonymize)
+
+
 def action_analyze_all(anonymize: bool) -> None:
     console.print("\n[bold yellow]🔄 Analyse de tous les logs[/bold yellow]\n")
-    for fname in ["auth.log", "access.log", "firewall.log"]:
+    for fname in ["auth.log", "access.log", "firewall.log", "ddos-access.log"]:
         console.print(f"\n[cyan]── Fichier {fname} ──[/cyan]")
         analyze_log_file(fname, anonymize)
 
@@ -340,22 +347,24 @@ def main() -> None:
         elif choice == "3":
             action_detect_scan(state["anonymize"])
         elif choice == "4":
-            action_analyze_all(state["anonymize"])
+            action_detect_ddos(state["anonymize"])
         elif choice == "5":
-            action_list_incidents()
+            action_analyze_all(state["anonymize"])
         elif choice == "6":
-            action_show_incident()
+            action_list_incidents()
         elif choice == "7":
-            action_chat()
+            action_show_incident()
         elif choice == "8":
-            action_stats()
+            action_chat()
         elif choice == "9":
-            action_export()
+            action_stats()
         elif choice == "10":
-            action_delete_incident()
+            action_export()
         elif choice == "11":
-            action_purge()
+            action_delete_incident()
         elif choice == "12":
+            action_purge()
+        elif choice == "13":
             action_toggle_anonymize(state)
         else:
             cli.print_error(f"Choix invalide : {choice}")
