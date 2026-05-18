@@ -98,3 +98,35 @@ def test_sql_injection_safe(storage):
     incidents = storage.list_incidents()
     assert len(incidents) == 1
     assert incidents[0]["summary"] == malicious_summary
+
+
+def test_new_incident_default_status_pending(storage):
+    """Un nouvel incident doit être 'pending' par défaut."""
+    incident_id = storage.save_incident("1.1.1.1", "a", "low", "s", [], [])
+    incident = storage.get_incident(incident_id)
+    assert incident["status"] == "pending"
+
+
+def test_update_incident_status_handled(storage):
+    incident_id = storage.save_incident("1.1.1.1", "a", "low", "s", [], [])
+    result = storage.update_incident_status(
+        incident_id, "handled", "IP bloquée au firewall"
+    )
+    assert result is True
+    incident = storage.get_incident(incident_id)
+    assert incident["status"] == "handled"
+    assert incident["handled_note"] == "IP bloquée au firewall"
+    assert incident["handled_at"] is not None
+
+
+def test_update_incident_status_false_positive(storage):
+    incident_id = storage.save_incident("1.1.1.1", "a", "low", "s", [], [])
+    storage.update_incident_status(incident_id, "false_positive", "Test interne")
+    incident = storage.get_incident(incident_id)
+    assert incident["status"] == "false_positive"
+
+
+def test_update_status_nonexistent(storage):
+    """Mettre à jour un incident inexistant retourne False."""
+    result = storage.update_incident_status(99999, "handled", "")
+    assert result is False

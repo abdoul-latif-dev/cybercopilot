@@ -2,6 +2,7 @@
 
 from rich.console import Console
 from rich.panel import Panel
+from rich.prompt import Prompt
 from rich.table import Table
 from rich.text import Text
 
@@ -20,6 +21,20 @@ SEVERITY_LABELS = {
     "high": "🟠 ÉLEVÉ",
     "medium": "🟡 MOYEN",
     "low": "🟢 FAIBLE",
+}
+
+STATUS_LABELS = {
+    "pending": "⏳ En attente",
+    "handled": "✅ Traité",
+    "false_positive": "❌ Faux positif",
+    "skipped": "⏭️  Passé",
+}
+
+STATUS_COLORS = {
+    "pending": "yellow",
+    "handled": "green",
+    "false_positive": "blue",
+    "skipped": "dim",
 }
 
 
@@ -81,6 +96,7 @@ def print_incidents_table(incidents: list[dict]) -> None:
     table = Table(title="Incidents enregistrés", show_lines=True)
     table.add_column("#", style="cyan", width=4)
     table.add_column("Sévérité", width=12)
+    table.add_column("Statut", width=14)
     table.add_column("Type", style="white")
     table.add_column("IP source", style="magenta")
     table.add_column("Date", style="dim")
@@ -89,9 +105,13 @@ def print_incidents_table(incidents: list[dict]) -> None:
         sev = inc.get("severity", "medium")
         color = SEVERITY_COLORS.get(sev, "white")
         label = SEVERITY_LABELS.get(sev, sev)
+        status = inc.get("status") or "pending"
+        st_color = STATUS_COLORS.get(status, "white")
+        st_label = STATUS_LABELS.get(status, status)
         table.add_row(
             str(inc["id"]),
             f"[{color}]{label}[/{color}]",
+            f"[{st_color}]{st_label}[/{st_color}]",
             inc.get("attack_type", "?"),
             inc.get("source_ip", "?"),
             inc.get("timestamp", "")[:19],
@@ -113,3 +133,46 @@ def print_warning(message: str) -> None:
 
 def print_error(message: str) -> None:
     console.print(f"[red]✗[/red] {message}")
+
+
+def prompt_incident_action(incident_id: int) -> tuple[str | None, str]:
+    """Demande à l'analyste quelle action prendre pour un incident.
+
+    Retourne (status, note) où status peut être :
+    - 'handled' : l'analyste a pris une action
+    - 'false_positive' : faux positif
+    - 'skipped' : passé sans action
+    - None : continuer sans rien faire
+    """
+    console.print()
+    console.print(
+        "[bold cyan]Quelle est votre décision sur cet incident ?[/bold cyan]"
+    )
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column(style="bold cyan", width=4)
+    table.add_column(style="white")
+    table.add_row("1.", "✅ Marquer comme traité (action prise hors application)")
+    table.add_row("2.", "❌ Marquer comme faux positif")
+    table.add_row("3.", "⏭️  Passer sans action")
+    table.add_row("0.", "↩️  Continuer (décider plus tard)")
+    console.print(table)
+
+    choice = Prompt.ask(
+        "[yellow]Votre choix[/yellow]",
+        choices=["0", "1", "2", "3"],
+        default="0",
+    ).strip()
+
+    if choice == "1":
+        note = Prompt.ask(
+            "[dim]Note optionnelle (action prise)[/dim]", default=""
+        ).strip()
+        return ("handled", note)
+    if choice == "2":
+        note = Prompt.ask(
+            "[dim]Note optionnelle (raison)[/dim]", default=""
+        ).strip()
+        return ("false_positive", note)
+    if choice == "3":
+        return ("skipped", "")
+    return (None, "")

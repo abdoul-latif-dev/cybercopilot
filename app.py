@@ -116,6 +116,13 @@ def analyze_log_file(filename: str, anonymize: bool) -> None:
             recommendation=analysis.get("recommendations", []),
         )
         cli.print_incident(incident_id, data, analysis)
+
+        # Demander à l'analyste sa décision (traçabilité, pas d'action exécutée)
+        status, note = cli.prompt_incident_action(incident_id)
+        if status:
+            storage.update_incident_status(incident_id, status, note)
+            cli.print_success(f"Incident #{incident_id} marqué : {status}")
+
     storage.close()
 
 

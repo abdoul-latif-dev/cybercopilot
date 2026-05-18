@@ -10,3 +10,7 @@ venv/
 .vscode/
 .idea/
 *.egg-info/
+
+# Rapports exportés (option 11 du menu)
+rapport.md
+rapport-*.md
