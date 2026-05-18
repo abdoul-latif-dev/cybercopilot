@@ -10,6 +10,7 @@ from src.parser import (
     parse_file,
     parse_firewall_line,
     parse_ssh_line,
+    parse_windows_event,
 )
 
 
@@ -34,6 +35,12 @@ def test_detect_log_type_firewall():
 
 def test_detect_log_type_unknown():
     assert detect_log_type(Path("random.log")) == "unknown"
+
+
+def test_detect_log_type_windows():
+    assert detect_log_type(Path("windows-security.evtx.json")) == "windows"
+    assert detect_log_type(Path("winlog.json")) == "windows"
+    assert detect_log_type(Path("evtx_export.json")) == "windows"
 
 
 # ────────────────────────────────────────────────────────────────────────
@@ -134,3 +141,72 @@ def test_parse_file_firewall_log():
 def test_parse_file_not_found():
     with pytest.raises(FileNotFoundError):
         parse_file("data/logs/inexistant.log")
+
+
+# ────────────────────────────────────────────────────────────────────────
+# parse_windows_event (Windows Event Log)
+# ────────────────────────────────────────────────────────────────────────
+
+def test_parse_windows_failed_logon():
+    record = {
+        "TimeCreated": "2026-04-28T08:30:01Z",
+        "Id": 4625,
+        "TargetUserName": "Administrator",
+        "IpAddress": "185.220.101.45",
+        "LogonType": 10,
+    }
+    event = parse_windows_event(record)
+    assert event is not None
+    assert event.source_ip == "185.220.101.45"
+    assert event.user == "Administrator"
+    assert event.status == "failed"
+    assert event.event_type == "ssh_login"
+    assert event.extra["event_id"] == 4625
+    assert event.extra["logon_type"] == "remote_desktop"
+
+
+def test_parse_windows_successful_logon():
+    record = {
+        "TimeCreated": "2026-04-28T09:00:15Z",
+        "Id": 4624,
+        "TargetUserName": "jdupont",
+        "IpAddress": "192.168.1.50",
+        "LogonType": 2,
+    }
+    event = parse_windows_event(record)
+    assert event is not None
+    assert event.status == "success"
+    assert event.extra["logon_type"] == "interactive"
+
+
+def test_parse_windows_account_created():
+    record = {
+        "TimeCreated": "2026-04-28T14:30:42Z",
+        "Id": 4720,
+        "TargetUserName": "backdoor_user",
+    }
+    event = parse_windows_event(record)
+    assert event is not None
+    assert event.event_type == "user_mgmt"
+    assert event.status == "created"
+
+
+def test_parse_windows_unknown_event_id():
+    record = {"Id": 9999, "TargetUserName": "x"}
+    assert parse_windows_event(record) is None
+
+
+def test_parse_windows_missing_id():
+    record = {"TargetUserName": "x"}
+    assert parse_windows_event(record) is None
+
+
+def test_parse_file_windows_json():
+    events = parse_file("data/logs/windows-security.evtx.json")
+    assert len(events) > 0
+    # Au moins 8 échecs de connexion brute force depuis 185.220.101.45
+    failed_from_attacker = [
+        e for e in events
+        if e.source_ip == "185.220.101.45" and e.status == "failed"
+    ]
+    assert len(failed_from_attacker) >= 8
