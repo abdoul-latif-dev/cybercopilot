@@ -8,6 +8,22 @@
 
 ---
 
+## 📚 Documentation du projet
+
+Le dossier [`docs/`](./docs/) contient tous les livrables académiques :
+
+| N° | Livrable | Description |
+|---|---|---|
+| 1 | [Cahier des charges](./docs/livrable-1-cahier-des-charges.pdf) | Besoin, périmètre, architecture, sécurité |
+| 2 | [Raison d'être](./docs/livrable-2-raison-etre.pdf) | Contexte, problématique, finalité |
+| 3 | [État de l'art & marché](./docs/livrable-3-etat-de-lart.pdf) | SIEM, SOAR, LLM + marché français |
+| 4 | [Business Plan](./docs/livrable-4-business-plan.pdf) | Modèle SaaS B2B, projections 3 ans |
+| 5 | [Brief Figma](./docs/livrable-5-brief-figma.pdf) | Design system + 10 écrans |
+| 6 | [Architecture technique](./docs/livrable-6-architecture-technique.pdf) | Modules, flux, performances |
+| — | [Répartition équipe](./docs/repartition-equipe.pdf) | Qui fait quoi |
+
+---
+
 ## 📖 Présentation
 
 **CyberCopilot** est un assistant SOC (Security Operations Center) qui aide les analystes cybersécurité à traiter le volume massif d'alertes auxquelles ils font face quotidiennement.
