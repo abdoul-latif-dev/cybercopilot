@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CyberCopilot — Votre copilote SOC en français</title>
+<meta name="description" content="Assistant SOC intelligent basé sur les LLM. Détecte 6 types d'attaques sur 4 formats de logs. Projet B2 2026.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6;color:#0F172A;background:#fff}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* Header */
+nav{background:#0F1729;padding:20px 0;position:sticky;top:0;z-index:100}
+.nav-content{display:flex;justify-content:space-between;align-items:center}
+.logo{color:#06B6D4;font-size:24px;font-weight:bold}
+.nav-links{display:flex;gap:32px}
+.nav-links a{color:#fff;text-decoration:none;font-size:15px}
+.nav-links a:hover{color:#06B6D4}
+.btn{background:#06B6D4;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;transition:.2s}
+.btn:hover{background:#0E7490}
+.btn-outline{background:transparent;border:2px solid #06B6D4;color:#06B6D4}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,#0F1729 0%,#1E293B 100%);color:#fff;padding:100px 0 80px;text-align:center}
+.hero h1{font-size:56px;margin-bottom:20px;background:linear-gradient(90deg,#06B6D4,#8B5CF6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero .tagline{font-size:24px;margin-bottom:16px;color:#E2E8F0}
+.hero .subtitle{font-size:18px;margin-bottom:40px;color:#94A3B8;max-width:700px;margin-left:auto;margin-right:auto}
+.hero-cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+
+/* Stats */
+.stats{background:#fff;padding:60px 0;border-bottom:1px solid #E2E8F0}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px;text-align:center}
+.stat .number{font-size:48px;font-weight:bold;color:#06B6D4;margin-bottom:8px}
+.stat .label{color:#64748B;font-size:14px;text-transform:uppercase;letter-spacing:1px}
+
+/* Sections */
+section{padding:80px 0}
+.section-title{font-size:40px;text-align:center;margin-bottom:16px;color:#0F1729}
+.section-subtitle{font-size:18px;color:#64748B;text-align:center;margin-bottom:60px;max-width:700px;margin-left:auto;margin-right:auto}
+
+/* Features */
+.features{background:#F8FAFC}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
+.feature{background:#fff;padding:32px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:.2s}
+.feature:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.feature .icon{font-size:40px;margin-bottom:16px}
+.feature h3{font-size:20px;margin-bottom:8px;color:#0F1729}
+.feature p{color:#64748B;font-size:15px}
+
+/* Attacks */
+.attacks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.attack-card{background:#0F1729;color:#fff;padding:24px;border-radius:8px;border-left:4px solid #06B6D4}
+.attack-card .icon{font-size:32px;margin-bottom:12px}
+.attack-card h4{font-size:16px;margin-bottom:8px;color:#06B6D4}
+.attack-card p{font-size:13px;color:#E2E8F0}
+
+/* Demo */
+.demo{background:#0F1729;color:#fff}
+.demo .section-title{color:#fff}
+.demo .section-subtitle{color:#94A3B8}
+.terminal{background:#020617;border-radius:12px;padding:24px;font-family:'Courier New',monospace;font-size:14px;line-height:1.6;max-width:900px;margin:0 auto;border:1px solid #1E293B}
+.terminal .prompt{color:#06B6D4}
+.terminal .success{color:#22C55E}
+.terminal .warning{color:#F59E0B}
+.terminal .danger{color:#EF4444}
+.terminal .info{color:#94A3B8}
+
+/* CTA */
+.cta{background:linear-gradient(135deg,#06B6D4 0%,#8B5CF6 100%);color:#fff;text-align:center}
+.cta h2{font-size:40px;margin-bottom:16px}
+.cta p{font-size:18px;margin-bottom:32px}
+
+/* Footer */
+footer{background:#0F1729;color:#94A3B8;padding:40px 0;text-align:center;font-size:14px}
+footer a{color:#06B6D4;text-decoration:none}
+
+@media(max-width:768px){
+.hero h1{font-size:36px}
+.hero .tagline{font-size:18px}
+.section-title{font-size:28px}
+.nav-links{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="container nav-content">
+    <div class="logo">🛡️ CyberCopilot</div>
+    <div class="nav-links">
+      <a href="#features">Fonctionnalités</a>
+      <a href="#demo">Démo</a>
+      <a href="#tarifs">Tarifs</a>
+      <a href="https://github.com/abdoul-latif-dev/cybercopilot" class="btn">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <h1>Votre copilote SOC en français.</h1>
+    <p class="tagline">De 1 000 logs bruts à 1 décision claire.</p>
+    <p class="subtitle">CyberCopilot transforme les logs de sécurité en résumés clairs et en actions concrètes, grâce à l'intelligence artificielle. Conçu pour les PME et ETI françaises.</p>
+    <div class="hero-cta">
+      <a href="https://github.com/abdoul-latif-dev/cybercopilot" class="btn">Voir le code sur GitHub</a>
+      <a href="#demo" class="btn btn-outline">Voir la démo</a>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section class="stats">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat"><div class="number">6</div><div class="label">Types d'attaques</div></div>
+      <div class="stat"><div class="number">4</div><div class="label">Formats de logs</div></div>
+      <div class="stat"><div class="number">92</div><div class="label">Tests pytest</div></div>
+      <div class="stat"><div class="number">94%</div><div class="label">Tokens économisés</div></div>
+      <div class="stat"><div class="number">100%</div><div class="label">Open Source</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+  <div class="container">
+    <h2 class="section-title">Pourquoi CyberCopilot ?</h2>
+    <p class="section-subtitle">Pensé pour les analystes SOC francophones qui veulent gagner du temps et de la précision.</p>
+    <div class="features-grid">
+      <div class="feature">
+        <div class="icon">🧠</div>
+        <h3>Analyse intelligente</h3>
+        <p>Résumés en langage naturel générés par LLM (OpenAI / Anthropic / Mistral). Recommandations contextuelles d'action.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🛡️</div>
+        <h3>Mode dégradé</h3>
+        <p>Si le LLM tombe, l'outil bascule sur des règles statiques. Garantit la disponibilité 100%.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🔐</div>
+        <h3>Conforme RGPD</h3>
+        <p>Anonymisation activable des IP internes et utilisateurs avant envoi au LLM. Droit à l'effacement implémenté.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">💰</div>
+        <h3>Coûts maîtrisés</h3>
+        <p>Compression intelligente des logs (jusqu'à 94 % de tokens économisés), cache des analyses, choix d'un modèle économique.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🇫🇷</div>
+        <h3>Souverain</h3>
+        <p>Option d'hébergement européen (Mistral). Aucun verrouillage Azure ou Google Cloud.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">⚡</div>
+        <h3>Rapide</h3>
+        <p>Analyse de 1 000 lignes en moins de 10 secondes. Pipeline en 6 modules indépendants.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Attacks -->
+<section>
+  <div class="container">
+    <h2 class="section-title">6 attaques détectées automatiquement</h2>
+    <p class="section-subtitle">Couverture des principales menaces d'un SOC, extensible facilement.</p>
+    <div class="attacks-grid">
+      <div class="attack-card"><div class="icon">🔍</div><h4>Brute Force SSH</h4><p>Tentatives massives de connexion</p></div>
+      <div class="attack-card"><div class="icon">💉</div><h4>Injection SQL</h4><p>Patterns ' OR 1=1, UNION SELECT</p></div>
+      <div class="attack-card"><div class="icon">🌐</div><h4>Scan de ports</h4><p>Reconnaissance d'infrastructure</p></div>
+      <div class="attack-card"><div class="icon">🚀</div><h4>DDoS</h4><p>Volume massif de requêtes</p></div>
+      <div class="attack-card"><div class="icon">⏰</div><h4>Horaires anormaux</h4><p>Accès entre 02h et 05h</p></div>
+      <div class="attack-card"><div class="icon">🛡️</div><h4>Accès admin suspect</h4><p>/admin, /wp-admin, /.env</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Demo -->
+<section class="demo" id="demo">
+  <div class="container">
+    <h2 class="section-title">En action</h2>
+    <p class="section-subtitle">Voici ce que vous voyez quand CyberCopilot détecte une attaque réelle.</p>
+    <div class="terminal">
+<span class="prompt">$</span> python app.py
+<span class="info">→ Lecture du fichier auth.log...</span>
+<span class="success">✓ 35 événement(s) extrait(s)</span>
+<span class="info">→ Détection des incidents...</span>
+<span class="success">✓ 2 incident(s) détecté(s)</span>
+
+<span class="danger">╭─── INCIDENT #1 🔴 CRITIQUE ─────────────────╮</span>
+<span class="danger">│</span> Type      : brute_force_ssh
+<span class="danger">│</span> IP source : <span class="danger">218.92.0.220</span> (Chine — malicious — APT)
+<span class="danger">│</span> Période   : 03/06/2026 23:47 → 23:48 (15 sec)
+<span class="danger">│</span> Volume    : <span class="danger">10 tentatives</span> sur root, admin
+<span class="danger">│</span>
+<span class="danger">│</span> <span class="warning">RÉSUMÉ</span>
+<span class="danger">│</span> Attaque coordonnée APT depuis IP chinoise.
+<span class="danger">│</span> 10 tentatives en 15 secondes — comportement
+<span class="danger">│</span> de botnet automatisé sur comptes privilégiés.
+<span class="danger">│</span>
+<span class="danger">│</span> <span class="success">ACTIONS RECOMMANDÉES</span>
+<span class="danger">│</span> <span class="success">1.</span> Bloquer IP au firewall
+<span class="danger">│</span> <span class="success">2.</span> Vérifier que root n'a pas été compromis
+<span class="danger">│</span> <span class="success">3.</span> Activer fail2ban
+<span class="danger">│</span> <span class="success">4.</span> Désactiver SSH par mot de passe
+<span class="danger">╰─────────────────────────────────────────────╯</span>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="container">
+    <h2>Prêt à essayer ?</h2>
+    <p>Open source, 100 % testé, déployable en 5 minutes.</p>
+    <a href="https://github.com/abdoul-latif-dev/cybercopilot" class="btn" style="background:#fff;color:#0F1729">Cloner sur GitHub</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <p>🛡️ CyberCopilot — Projet B2 · 2026 · <a href="https://github.com/abdoul-latif-dev/cybercopilot">github.com/abdoul-latif-dev/cybercopilot</a></p>
+    <p style="margin-top:8px;font-size:12px">Hébergé en France. Conforme RGPD et NIS2.</p>
+  </div>
+</footer>
+
+</body>
+</html>
