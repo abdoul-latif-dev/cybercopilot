@@ -70,11 +70,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     </p>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       {% for icon, title, desc in [
-        ('🧠', 'Analyse intelligente', 'Résumés en langage naturel par LLM (OpenAI / Anthropic / Mistral). Recommandations contextuelles.'),
+        ('🧠', 'Analyse intelligente', 'Résumés en langage naturel par LLM (Claude ou OpenAI au choix). Recommandations contextuelles.'),
         ('🛡️', 'Mode dégradé', 'Si le LLM tombe, l\'outil bascule sur des règles statiques. Disponibilité 100%.'),
         ('🔐', 'Conforme RGPD', 'Anonymisation activable des IP et utilisateurs. Droit à l\'effacement.'),
         ('💰', 'Coûts maîtrisés', 'Compression intelligente des logs (jusqu\'à 94 % d\'économie), cache des analyses.'),
-        ('🇫🇷', 'Souverain', 'Option d\'hébergement européen (Mistral). Aucun verrouillage cloud.'),
+        ('🐳', 'Portable', 'Déploiement Docker en une commande. Sur ton serveur, ton cloud ou Render. Aucun verrouillage.'),
         ('⚡', 'Rapide', 'Analyse de 1 000 lignes en moins de 10 secondes. Architecture modulaire.'),
       ] %}
       <div class="bg-white p-8 rounded-xl shadow hover:shadow-lg transition">
