@@ -48,6 +48,7 @@ app.add_middleware(
     https_only=IS_PRODUCTION,
     same_site="lax",
 )
+(BASE_DIR / "static").mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
