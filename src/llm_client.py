@@ -29,8 +29,9 @@ STATS = {
 }
 
 
-# Rate limiting (12 sec entre 2 appels Claude, 6 sec entre 2 appels OpenAI)
-_MIN_INTERVAL = 12.0
+# Rate limiting — Claude tier 1 accepte ~50 req/min, donc 1 sec suffit.
+# (Avant : 12 sec ultra-conservateur → analyse de 14 incidents prenait 3 min 45.)
+_MIN_INTERVAL = 1.0
 _last_call = 0.0
 
 
