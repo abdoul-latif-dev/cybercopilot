@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Statistiques · CyberCopilot{% endblock %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <div class="mb-8 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-navy">Statistiques</h1>
+      <p class="text-slate-600 mt-1">Vue d'ensemble de vos incidents et de la consommation LLM</p>
+    </div>
+    <a href="/export" class="bg-cyber-500 hover:bg-cyber-600 text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2">
+      📥 Exporter le rapport
+    </a>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-cyber-500">
+      <div class="text-slate-500 text-sm">Total incidents</div>
+      <div class="text-4xl font-bold text-navy mt-2">{{ stats.total }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-purple-500">
+      <div class="text-slate-500 text-sm">🧠 Appels LLM</div>
+      <div class="text-4xl font-bold text-purple-600 mt-2">{{ llm_stats.calls }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
+      <div class="text-slate-500 text-sm">💰 Tokens économisés</div>
+      <div class="text-4xl font-bold text-green-600 mt-2">{{ (llm_stats.tokens_saved_compression + llm_stats.tokens_saved_cache) | int }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
+      <div class="text-slate-500 text-sm">⚡ Cache hits</div>
+      <div class="text-4xl font-bold text-blue-600 mt-2">{{ llm_stats.cache_hits }}</div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+    <!-- Pie chart sévérité -->
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold text-navy mb-4">Répartition par sévérité</h2>
+      <canvas id="chart-severity" height="250"></canvas>
+    </div>
+
+    <!-- Bar chart par type -->
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold text-navy mb-4">Incidents par type d'attaque</h2>
+      <canvas id="chart-attack" height="250"></canvas>
+    </div>
+
+    <!-- Pie chart statuts -->
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold text-navy mb-4">Statuts des incidents</h2>
+      <canvas id="chart-status" height="250"></canvas>
+    </div>
+
+    <!-- Line chart timeline -->
+    <div class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-bold text-navy mb-4">Activité dans le temps</h2>
+      <canvas id="chart-timeline" height="250"></canvas>
+    </div>
+
+  </div>
+
+  <!-- DÉTAIL TOKENS -->
+  <div class="bg-white rounded-xl shadow p-6">
+    <h2 class="text-lg font-bold text-navy mb-4">Consommation tokens LLM (session courante)</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <div class="text-slate-500 text-sm">Tokens entrée</div>
+        <div class="text-2xl font-bold text-navy">{{ llm_stats.tokens_in }}</div>
+      </div>
+      <div>
+        <div class="text-slate-500 text-sm">Tokens sortie</div>
+        <div class="text-2xl font-bold text-navy">{{ llm_stats.tokens_out }}</div>
+      </div>
+      <div>
+        <div class="text-slate-500 text-sm">Économie par compression</div>
+        <div class="text-2xl font-bold text-green-600">{{ llm_stats.tokens_saved_compression }}</div>
+      </div>
+    </div>
+    {% set total_used = llm_stats.tokens_in + llm_stats.tokens_out %}
+    {% set total_saved = llm_stats.tokens_saved_compression + llm_stats.tokens_saved_cache %}
+    {% if total_used + total_saved > 0 %}
+    {% set pct = (total_saved * 100 / (total_used + total_saved)) | int %}
+    <div class="mt-4 pt-4 border-t border-slate-200">
+      <div class="flex justify-between mb-2 text-sm">
+        <span class="text-slate-700">Économie globale</span>
+        <span class="font-bold text-green-600">{{ pct }} %</span>
+      </div>
+      <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+        <div class="bg-green-500 h-3 rounded-full" style="width: {{ pct }}%"></div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const palette = {
+  critical: '#EF4444',
+  high: '#F97316',
+  medium: '#EAB308',
+  low: '#22C55E',
+  pending: '#F59E0B',
+  handled: '#22C55E',
+  false_positive: '#3B82F6',
+  skipped: '#94A3B8',
+};
+
+// Sévérité
+const sevData = {{ stats.by_severity | tojson }};
+new Chart(document.getElementById('chart-severity'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(sevData),
+    datasets: [{
+      data: Object.values(sevData),
+      backgroundColor: Object.keys(sevData).map(k => palette[k] || '#94A3B8'),
+    }]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+// Type d'attaque
+const attackData = {{ stats.by_type | tojson }};
+new Chart(document.getElementById('chart-attack'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(attackData),
+    datasets: [{
+      label: 'Nombre d\'incidents',
+      data: Object.values(attackData),
+      backgroundColor: '#06B6D4',
+    }]
+  },
+  options: { responsive: true, plugins: { legend: { display: false } } }
+});
+
+// Statut
+const statusData = {{ stats.by_status | tojson }};
+new Chart(document.getElementById('chart-status'), {
+  type: 'pie',
+  data: {
+    labels: Object.keys(statusData),
+    datasets: [{
+      data: Object.values(statusData),
+      backgroundColor: Object.keys(statusData).map(k => palette[k] || '#94A3B8'),
+    }]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+// Timeline
+const timelineRaw = {{ timeline | tojson }};
+new Chart(document.getElementById('chart-timeline'), {
+  type: 'line',
+  data: {
+    labels: timelineRaw.map(t => t[0]),
+    datasets: [{
+      label: 'Incidents détectés',
+      data: timelineRaw.map(t => t[1]),
+      borderColor: '#06B6D4',
+      backgroundColor: 'rgba(6,182,212,0.1)',
+      tension: 0.3,
+      fill: true,
+    }]
+  },
+  options: { responsive: true, plugins: { legend: { display: false } } }
+});
+</script>
+
+{% endblock %}

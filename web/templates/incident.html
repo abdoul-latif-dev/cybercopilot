@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Incident #{{ incident.id }} · CyberCopilot{% endblock %}
+{% block content %}
+
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <a href="/dashboard" class="text-cyber-600 hover:text-cyber-700 text-sm mb-4 inline-block">
+    ← Retour au tableau de bord
+  </a>
+
+  <!-- HEADER -->
+  <div class="bg-white rounded-xl shadow p-6 mb-6">
+    <div class="flex justify-between items-start">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <h1 class="text-2xl font-bold text-navy">Incident #{{ incident.id }}</h1>
+          {% if incident.severity == 'critical' %}
+            <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-semibold">🔴 CRITIQUE</span>
+          {% elif incident.severity == 'high' %}
+            <span class="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-semibold">🟠 ÉLEVÉ</span>
+          {% elif incident.severity == 'medium' %}
+            <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold">🟡 MOYEN</span>
+          {% else %}
+            <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">🟢 FAIBLE</span>
+          {% endif %}
+        </div>
+        <p class="text-slate-600">{{ incident.attack_type }} depuis <span class="font-mono text-purple-700">{{ incident.source_ip }}</span></p>
+        <p class="text-xs text-slate-400 mt-1">Détecté le {{ incident.timestamp[:19] }}</p>
+      </div>
+
+      <form method="POST" action="/incidents/{{ incident.id }}/delete"
+            onsubmit="return confirm('Supprimer définitivement cet incident (RGPD) ?');">
+        <button class="text-red-500 hover:text-red-700 text-sm">🗑️ Supprimer</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- RÉSUMÉ LLM -->
+  <div class="bg-white rounded-xl shadow p-6 mb-6">
+    <h2 class="text-sm font-semibold text-cyber-600 mb-2 uppercase tracking-wider">🧠 Résumé</h2>
+    <p class="text-slate-800 leading-relaxed">{{ incident.summary }}</p>
+  </div>
+
+  <!-- RECOMMANDATIONS -->
+  <div class="bg-white rounded-xl shadow p-6 mb-6">
+    <h2 class="text-sm font-semibold text-cyber-600 mb-3 uppercase tracking-wider">✅ Actions recommandées</h2>
+    <ol class="space-y-2">
+      {% for action in incident.recommendations_list %}
+      <li class="flex gap-3">
+        <span class="font-bold text-cyber-500">{{ loop.index }}.</span>
+        <span class="text-slate-700">{{ action }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  <!-- WORKFLOW ANALYSTE -->
+  <div class="bg-white rounded-xl shadow p-6 mb-6">
+    <h2 class="text-sm font-semibold text-cyber-600 mb-3 uppercase tracking-wider">🎯 Votre décision</h2>
+
+    {% set status = incident.status or 'pending' %}
+    <p class="text-sm text-slate-500 mb-4">
+      Statut actuel :
+      {% if status == 'handled' %}
+        <span class="text-green-600 font-semibold">✅ Traité</span>
+        {% if incident.handled_note %}— <span class="italic">{{ incident.handled_note }}</span>{% endif %}
+      {% elif status == 'false_positive' %}
+        <span class="text-blue-600 font-semibold">❌ Faux positif</span>
+        {% if incident.handled_note %}— <span class="italic">{{ incident.handled_note }}</span>{% endif %}
+      {% elif status == 'skipped' %}
+        <span class="text-slate-500 font-semibold">⏭️ Passé</span>
+      {% else %}
+        <span class="text-yellow-600 font-semibold">⏳ En attente de décision</span>
+      {% endif %}
+    </p>
+
+    <form method="POST" action="/incidents/{{ incident.id }}/status" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <input type="text" name="note" placeholder="Note optionnelle (action prise)..."
+             class="md:col-span-2 px-4 py-2 border border-slate-300 rounded-lg text-sm">
+      <div class="flex gap-2">
+        <button type="submit" name="status" value="handled"
+                class="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold py-2 rounded-lg">
+          ✅ Traité
+        </button>
+        <button type="submit" name="status" value="false_positive"
+                class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-2 rounded-lg">
+          ❌ Faux pos.
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- LOGS BRUTS -->
+  <div class="bg-white rounded-xl shadow p-6">
+    <h2 class="text-sm font-semibold text-cyber-600 mb-3 uppercase tracking-wider">📋 Logs bruts</h2>
+    <div class="bg-slate-900 text-slate-100 rounded-lg p-4 font-mono text-xs overflow-x-auto">
+      {% for log in incident.raw_logs_list %}
+      <div>{{ log }}</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

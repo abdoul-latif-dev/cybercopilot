@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Paramètres · CyberCopilot{% endblock %}
+{% block content %}
+
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <h1 class="text-3xl font-bold text-navy mb-2">⚙️ Paramètres</h1>
+  <p class="text-slate-600 mb-8">Gérez votre compte et vos préférences</p>
+
+  {% if message %}
+  <div class="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded mb-6">
+    ✅ {{ message }}
+  </div>
+  {% endif %}
+  {% if error %}
+  <div class="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded mb-6">
+    ⚠️ {{ error }}
+  </div>
+  {% endif %}
+
+  <!-- COMPTE -->
+  <div class="bg-white rounded-xl shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-navy mb-4">👤 Mon compte</h2>
+    <dl class="grid grid-cols-2 gap-4 text-sm">
+      <dt class="text-slate-500">Nom complet</dt>
+      <dd class="font-medium">{{ user.full_name or '—' }}</dd>
+      <dt class="text-slate-500">Email</dt>
+      <dd class="font-medium">{{ user.email }}</dd>
+      <dt class="text-slate-500">Rôle</dt>
+      <dd class="font-medium">{{ user.role }}</dd>
+      <dt class="text-slate-500">Compte créé</dt>
+      <dd class="font-medium">{{ user.created_at[:10] }}</dd>
+    </dl>
+  </div>
+
+  <!-- CHANGEMENT MOT DE PASSE -->
+  <div class="bg-white rounded-xl shadow p-6 mb-6">
+    <h2 class="text-lg font-bold text-navy mb-4">🔐 Changer mon mot de passe</h2>
+    <form method="POST" action="/settings/password" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Mot de passe actuel</label>
+        <input type="password" name="current" required
+               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyber-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Nouveau mot de passe (6 caractères minimum)</label>
+        <input type="password" name="new_password" required minlength="6"
+               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyber-500">
+      </div>
+      <button type="submit"
+              class="bg-cyber-500 hover:bg-cyber-600 text-white font-semibold px-6 py-2 rounded-lg">
+        Modifier mon mot de passe
+      </button>
+    </form>
+  </div>
+
+  <!-- ZONE DANGER -->
+  <div class="bg-white rounded-xl shadow p-6 border-2 border-red-200">
+    <h2 class="text-lg font-bold text-red-700 mb-4">⚠️ Zone à risque — RGPD</h2>
+    <p class="text-sm text-slate-600 mb-4">
+      Vous pouvez exercer votre droit à l'oubli en supprimant définitivement
+      tous vos incidents enregistrés. Cette action est irréversible.
+    </p>
+    <form method="POST" action="/settings/purge"
+          onsubmit="return confirm('Voulez-vous VRAIMENT supprimer TOUS vos incidents ? Cette action est irréversible.');">
+      <button type="submit"
+              class="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-2 rounded-lg">
+        🗑️ Supprimer tous mes incidents
+      </button>
+    </form>
+  </div>
+
+</div>
+
+{% endblock %}

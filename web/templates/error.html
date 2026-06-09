@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Erreur {{ code }} · CyberCopilot</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center" style="background:linear-gradient(135deg,#0F1729 0%,#1E293B 100%)">
+  <div class="max-w-md w-full mx-4 text-center">
+    <div class="text-9xl font-bold text-cyan-400 mb-4">{{ code }}</div>
+    <h1 class="text-3xl font-bold text-white mb-2">
+      {% if code == 404 %}Page introuvable
+      {% elif code == 500 %}Erreur serveur
+      {% elif code == 403 %}Accès interdit
+      {% else %}Erreur
+      {% endif %}
+    </h1>
+    <p class="text-slate-300 mb-8">{{ detail }}</p>
+    <a href="/" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white font-semibold px-8 py-3 rounded-lg transition">
+      ← Retour à l'accueil
+    </a>
+  </div>
+</body>
+</html>

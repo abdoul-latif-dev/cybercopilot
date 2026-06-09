@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · CyberCopilot{% endblock %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <div class="mb-8 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-navy">Mon tableau de bord</h1>
+      <p class="text-slate-600 mt-1">Bienvenue {{ user.full_name or user.email }}</p>
+    </div>
+    <a href="/upload" class="bg-cyber-500 hover:bg-cyber-600 text-white font-semibold px-6 py-3 rounded-lg transition flex items-center gap-2">
+      📤 Analyser des logs
+    </a>
+  </div>
+
+  <!-- STATS CARDS -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-cyber-500">
+      <div class="text-slate-500 text-sm">Total incidents</div>
+      <div class="text-4xl font-bold text-navy mt-2">{{ stats.total }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-red-500">
+      <div class="text-slate-500 text-sm">🔴 Critiques</div>
+      <div class="text-4xl font-bold text-red-600 mt-2">{{ stats.by_severity.get('critical', 0) }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-orange-500">
+      <div class="text-slate-500 text-sm">🟠 Élevés</div>
+      <div class="text-4xl font-bold text-orange-600 mt-2">{{ stats.by_severity.get('high', 0) }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-yellow-500">
+      <div class="text-slate-500 text-sm">🟡 Moyens</div>
+      <div class="text-4xl font-bold text-yellow-600 mt-2">{{ stats.by_severity.get('medium', 0) }}</div>
+    </div>
+  </div>
+
+  <!-- FILTRES -->
+  <div class="bg-white rounded-xl shadow p-4 mb-4">
+    <form method="GET" action="/dashboard" class="flex flex-wrap items-center gap-3 text-sm">
+      <span class="font-semibold text-slate-700">🔍 Filtres :</span>
+
+      <select name="severity" onchange="this.form.submit()"
+              class="px-3 py-1.5 border border-slate-300 rounded-lg">
+        <option value="">Toutes les sévérités</option>
+        <option value="critical" {% if current_filters.severity == 'critical' %}selected{% endif %}>🔴 Critique</option>
+        <option value="high" {% if current_filters.severity == 'high' %}selected{% endif %}>🟠 Élevé</option>
+        <option value="medium" {% if current_filters.severity == 'medium' %}selected{% endif %}>🟡 Moyen</option>
+        <option value="low" {% if current_filters.severity == 'low' %}selected{% endif %}>🟢 Faible</option>
+      </select>
+
+      <select name="status" onchange="this.form.submit()"
+              class="px-3 py-1.5 border border-slate-300 rounded-lg">
+        <option value="">Tous les statuts</option>
+        <option value="pending" {% if current_filters.status == 'pending' %}selected{% endif %}>⏳ En attente</option>
+        <option value="handled" {% if current_filters.status == 'handled' %}selected{% endif %}>✅ Traité</option>
+        <option value="false_positive" {% if current_filters.status == 'false_positive' %}selected{% endif %}>❌ Faux positif</option>
+        <option value="skipped" {% if current_filters.status == 'skipped' %}selected{% endif %}>⏭️ Passé</option>
+      </select>
+
+      <select name="attack" onchange="this.form.submit()"
+              class="px-3 py-1.5 border border-slate-300 rounded-lg">
+        <option value="">Tous les types</option>
+        {% for at in attack_types %}
+        <option value="{{ at }}" {% if current_filters.attack == at %}selected{% endif %}>{{ at }}</option>
+        {% endfor %}
+      </select>
+
+      {% if current_filters.severity or current_filters.status or current_filters.attack %}
+      <a href="/dashboard" class="text-cyber-600 hover:text-cyber-700 text-sm ml-auto">
+        ✕ Effacer les filtres
+      </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- INCIDENTS TABLE -->
+  <div class="bg-white rounded-xl shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+      <h2 class="text-xl font-bold text-navy">Incidents détectés</h2>
+      <span class="text-sm text-slate-500">{{ incidents|length }} incident(s)</span>
+    </div>
+
+    {% if incidents %}
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-slate-50 text-slate-700 text-sm">
+          <tr>
+            <th class="text-left px-6 py-3">#</th>
+            <th class="text-left px-6 py-3">Sévérité</th>
+            <th class="text-left px-6 py-3">Statut</th>
+            <th class="text-left px-6 py-3">Type d'attaque</th>
+            <th class="text-left px-6 py-3">IP source</th>
+            <th class="text-left px-6 py-3">Date</th>
+            <th class="text-right px-6 py-3">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for inc in incidents %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-6 py-4 text-slate-500">#{{ inc.id }}</td>
+            <td class="px-6 py-4">
+              {% if inc.severity == 'critical' %}
+                <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">🔴 CRITIQUE</span>
+              {% elif inc.severity == 'high' %}
+                <span class="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-semibold">🟠 ÉLEVÉ</span>
+              {% elif inc.severity == 'medium' %}
+                <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">🟡 MOYEN</span>
+              {% else %}
+                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">🟢 FAIBLE</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4">
+              {% set status = inc.status or 'pending' %}
+              {% if status == 'handled' %}
+                <span class="text-green-600 text-sm">✅ Traité</span>
+              {% elif status == 'false_positive' %}
+                <span class="text-blue-600 text-sm">❌ Faux positif</span>
+              {% elif status == 'skipped' %}
+                <span class="text-slate-500 text-sm">⏭️ Passé</span>
+              {% else %}
+                <span class="text-yellow-600 text-sm">⏳ En attente</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 font-mono text-sm">{{ inc.attack_type }}</td>
+            <td class="px-6 py-4 font-mono text-sm text-purple-700">{{ inc.source_ip }}</td>
+            <td class="px-6 py-4 text-sm text-slate-500">{{ inc.timestamp[:16] }}</td>
+            <td class="px-6 py-4 text-right">
+              <a href="/incidents/{{ inc.id }}" class="text-cyber-600 hover:text-cyber-700 font-semibold text-sm">
+                Voir →
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="py-12 text-center text-slate-500">
+      <div class="text-6xl mb-4">📭</div>
+      <p class="text-lg font-medium">Aucun incident pour l'instant</p>
+      <p class="text-sm mt-1">Commencez par <a href="/upload" class="text-cyber-600 hover:underline">analyser un fichier de logs</a></p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

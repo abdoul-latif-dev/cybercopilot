@@ -59,6 +59,30 @@ L'objectif n'est pas de remplacer l'analyste, mais de lui fournir un **copilote*
 
 ---
 
+## 🌐 Interface web (NEW)
+
+Une web app avec authentification multi-utilisateur est disponible :
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env
+python web/app.py
+# → http://localhost:8000
+```
+
+**Fonctionnalités web :**
+- 🔐 Inscription / connexion (bcrypt + sessions)
+- 📋 Dashboard personnel par utilisateur
+- 📤 Upload et analyse de logs par drag-and-drop
+- 📊 Statistiques avec graphiques (Chart.js)
+- 💬 Chat conversationnel avec l'assistant
+- 📥 Export Markdown
+- ⚙️ Paramètres + droit à l'oubli RGPD
+
+**Déploiement** : voir [DEPLOY.md](./DEPLOY.md) (Render, Docker, local).
+
+---
+
 ## 🚀 Démarrage rapide
 
 ### Prérequis
