@@ -418,20 +418,30 @@ def upload_page(request: Request, user: dict = Depends(get_current_user)):
 @app.post("/upload", response_class=HTMLResponse)
 async def upload_analyze(
     request: Request,
-    file: UploadFile = File(...),
+    content_b64: str = Form(""),
+    filename: str = Form("upload.log"),
     user: dict = Depends(get_current_user),
 ):
     """Upload + analyse simultanée de TOUS les types d'attaque.
 
     L'anonymisation RGPD est TOUJOURS appliquée (politique permanente).
+
+    Le contenu du fichier est envoyé en base64 (champ `content_b64`) pour
+    contourner les WAF qui bloqueraient les patterns d'attaque présents dans
+    les logs analysés (SQLi, brute force, etc.).
     """
-    content = await file.read()
+    import base64
+    try:
+        content = base64.b64decode(content_b64) if content_b64 else b""
+    except Exception:
+        return render(request, "upload.html", user=user, error="Fichier illisible (encodage)", result=None)
+
     if not content:
         return render(request, "upload.html", user=user, error="Fichier vide", result=None)
 
-    suffix = Path(file.filename).suffix or ".log"
+    suffix = Path(filename).suffix or ".log"
     with tempfile.NamedTemporaryFile(
-        suffix="_" + (file.filename or f"upload{suffix}"),
+        suffix="_" + (filename or f"upload{suffix}"),
         delete=False,
         mode="wb",
     ) as tmp:
@@ -488,7 +498,7 @@ async def upload_analyze(
         return render(
             request, "upload.html",
             user=user,
-            result={"filename": file.filename, "events": len(events), "incidents": saved},
+            result={"filename": filename, "events": len(events), "incidents": saved},
             error=None,
         )
     finally:
