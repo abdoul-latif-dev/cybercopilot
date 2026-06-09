@@ -1,4 +1,10 @@
-"""Client LLM — appelle OpenAI avec cache, compression et suivi des tokens."""
+"""Client LLM — supporte Claude (Anthropic) ET OpenAI avec détection auto.
+
+Priorité :
+1. Si ANTHROPIC_API_KEY est définie → utilise Claude (recommandé)
+2. Sinon si OPENAI_API_KEY est définie → utilise OpenAI
+3. Sinon → mode dégradé (templates statiques)
+"""
 
 import json
 import os
@@ -19,11 +25,12 @@ STATS = {
     "tokens_out": 0,
     "tokens_saved_compression": 0,
     "tokens_saved_cache": 0,
+    "provider": "fallback",  # 'claude', 'openai' ou 'fallback'
 }
 
 
-# Rate limiting — 10 appels/min (OpenAI tolère plus que Claude)
-_MIN_INTERVAL = 6.0
+# Rate limiting (12 sec entre 2 appels Claude, 6 sec entre 2 appels OpenAI)
+_MIN_INTERVAL = 12.0
 _last_call = 0.0
 
 
@@ -35,12 +42,29 @@ def _rate_limit() -> None:
     _last_call = time.time()
 
 
+def _detect_provider() -> str:
+    """Détermine quel LLM utiliser selon les variables d'environnement.
+
+    Returns: 'claude', 'openai' ou 'fallback'
+    """
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+    openai_key = os.getenv("OPENAI_API_KEY", "")
+    if anthropic_key and not anthropic_key.startswith("sk-ant-your"):
+        return "claude"
+    if openai_key and not openai_key.startswith("sk-proj-your"):
+        return "openai"
+    return "fallback"
+
+
+# ════════════════════════════════════════════════════════════════════════
+# FALLBACK — mode dégradé sans LLM
+# ════════════════════════════════════════════════════════════════════════
+
 def fallback_analysis(incident_data: dict) -> dict[str, Any]:
     """Analyse de secours sans LLM."""
     attack_type = incident_data.get("attack_type", "unknown")
     count = incident_data.get("count", 0)
     ip = incident_data.get("source_ip", "?")
-    reputation = incident_data.get("reputation", "unknown")
 
     summaries = {
         "brute_force_ssh": f"Attaque par force brute SSH détectée depuis {ip}. {count} tentatives échouées.",
@@ -87,12 +111,7 @@ def fallback_analysis(incident_data: dict) -> dict[str, Any]:
         ],
     }
 
-    severity = "high"
-    if reputation == "malicious":
-        severity = "critical"
-    elif count < 10:
-        severity = "medium"
-
+    severity = incident_data.get("severity", "medium")
     return {
         "summary": summaries.get(attack_type, f"Activité suspecte depuis {ip}."),
         "severity": severity,
@@ -107,100 +126,75 @@ def _compress_for_prompt(incident_data: dict) -> dict:
     raw = incident_data.get("sample_logs", [])
     if not raw:
         return incident_data
-
     original_text = "\n".join(raw)
     compressed_text = compress_logs(raw)
-
     saved = estimate_tokens(original_text) - estimate_tokens(compressed_text)
     STATS["tokens_saved_compression"] += max(0, saved)
-
     compressed = incident_data.copy()
     compressed["sample_logs"] = compressed_text.split("\n")
     return compressed
 
 
-def analyze_incident(
-    incident_data: dict,
-    model: str | None = None,
-    use_cache: bool = True,
-    anonymize: bool = False,
-) -> dict[str, Any]:
-    """Analyse un incident — vérifie le cache, sinon appelle l'API."""
+# ════════════════════════════════════════════════════════════════════════
+# APPEL CLAUDE (Anthropic) — RECOMMANDÉ
+# ════════════════════════════════════════════════════════════════════════
 
-    # 1. Cache
-    if use_cache:
-        cached = cache.get(incident_data)
-        if cached is not None:
-            STATS["cache_hits"] += 1
-            STATS["tokens_saved_cache"] += 500  # estimation conservatrice
-            return cached
-
-    # 2. Vérification clé API
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or api_key.startswith("sk-proj-your"):
-        return fallback_analysis(incident_data)
-
+def _call_claude(user_prompt: str, model: str | None = None) -> dict[str, Any] | None:
+    """Appelle l'API Anthropic Claude et retourne le JSON parsé."""
     try:
-        from openai import OpenAI
+        from anthropic import Anthropic
     except ImportError:
-        return fallback_analysis(incident_data)
+        return None
 
-    # 3. Anonymisation (optionnelle, RGPD)
-    data_for_llm = anonymize_incident(incident_data) if anonymize else incident_data
-
-    # 4. Compression des logs
-    compressed = _compress_for_prompt(data_for_llm)
-    user_prompt = build_user_prompt(compressed)
-    model_name = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    model_name = model or os.getenv("LLM_MODEL", "claude-sonnet-4-5")
+    # Si l'utilisateur a mis un modèle OpenAI dans LLM_MODEL, prendre un défaut Claude
+    if model_name.startswith("gpt"):
+        model_name = "claude-sonnet-4-5"
 
     _rate_limit()
+    client = Anthropic(api_key=api_key)
+    response = client.messages.create(
+        model=model_name,
+        max_tokens=1024,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
 
+    # Extraction du texte
+    text = ""
+    for block in response.content:
+        if hasattr(block, "text"):
+            text += block.text
+    text = text.strip()
+    # Claude peut envelopper la réponse dans ```json ... ```
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:].strip()
+
+    # Compter les tokens réellement utilisés
+    STATS["calls"] += 1
+    STATS["provider"] = "claude"
+    if response.usage:
+        STATS["tokens_in"] += response.usage.input_tokens
+        STATS["tokens_out"] += response.usage.output_tokens
+
+    return json.loads(text)
+
+
+def _chat_claude(question: str, context: str = "", model: str | None = None) -> str | None:
+    """Mode conversationnel via Claude."""
     try:
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model=model_name,
-            max_tokens=512,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
-        text = response.choices[0].message.content.strip()
-
-        # Compter uniquement les appels qui ont réellement abouti
-        STATS["calls"] += 1
-        if response.usage:
-            STATS["tokens_in"] += response.usage.prompt_tokens
-            STATS["tokens_out"] += response.usage.completion_tokens
-
-        result = json.loads(text)
-        result["_fallback"] = False
-
-        # 4. Mise en cache
-        if use_cache:
-            cache.set(incident_data, result)
-
-        return result
-    except Exception as e:
-        result = fallback_analysis(incident_data)
-        result["_error"] = str(e)
-        return result
-
-
-def chat(question: str, context: str = "", model: str | None = None) -> str:
-    """Mode conversationnel."""
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or api_key.startswith("sk-proj-your"):
-        return "[Mode dégradé] OPENAI_API_KEY non configurée dans .env."
-
-    try:
-        from openai import OpenAI
+        from anthropic import Anthropic
     except ImportError:
-        return "[Erreur] Module openai non installé. Lance : pip install openai"
+        return None
 
-    client = OpenAI(api_key=api_key)
-    model_name = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    model_name = model or os.getenv("LLM_MODEL", "claude-sonnet-4-5")
+    if model_name.startswith("gpt"):
+        model_name = "claude-sonnet-4-5"
+
     system = (
         "Tu es un assistant SOC expert en cybersécurité. "
         "Tu réponds aux questions de l'analyste de manière claire et concise, en français."
@@ -208,24 +202,180 @@ def chat(question: str, context: str = "", model: str | None = None) -> str:
     full_prompt = f"CONTEXTE :\n{context}\n\nQUESTION :\n{question}" if context else question
 
     _rate_limit()
+    client = Anthropic(api_key=api_key)
+    response = client.messages.create(
+        model=model_name,
+        max_tokens=1024,
+        system=system,
+        messages=[{"role": "user", "content": full_prompt}],
+    )
+    STATS["calls"] += 1
+    STATS["provider"] = "claude"
+    if response.usage:
+        STATS["tokens_in"] += response.usage.input_tokens
+        STATS["tokens_out"] += response.usage.output_tokens
+
+    text = ""
+    for block in response.content:
+        if hasattr(block, "text"):
+            text += block.text
+    return text.strip()
+
+
+# ════════════════════════════════════════════════════════════════════════
+# APPEL OPENAI — fallback secondaire
+# ════════════════════════════════════════════════════════════════════════
+
+def _call_openai(user_prompt: str, model: str | None = None) -> dict[str, Any] | None:
+    """Appelle l'API OpenAI et retourne le JSON parsé."""
+    try:
+        from openai import OpenAI
+    except ImportError:
+        return None
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    model_name = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+    if model_name.startswith("claude"):
+        model_name = "gpt-4o-mini"
+
+    _rate_limit()
+    client = OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model=model_name,
+        max_tokens=512,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+
+    text = response.choices[0].message.content.strip()
+    STATS["calls"] += 1
+    STATS["provider"] = "openai"
+    if response.usage:
+        STATS["tokens_in"] += response.usage.prompt_tokens
+        STATS["tokens_out"] += response.usage.completion_tokens
+
+    return json.loads(text)
+
+
+def _chat_openai(question: str, context: str = "", model: str | None = None) -> str | None:
+    """Mode conversationnel via OpenAI."""
+    try:
+        from openai import OpenAI
+    except ImportError:
+        return None
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    model_name = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+    if model_name.startswith("claude"):
+        model_name = "gpt-4o-mini"
+
+    system = (
+        "Tu es un assistant SOC expert en cybersécurité. "
+        "Tu réponds aux questions de l'analyste de manière claire et concise, en français."
+    )
+    full_prompt = f"CONTEXTE :\n{context}\n\nQUESTION :\n{question}" if context else question
+
+    _rate_limit()
+    client = OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model=model_name,
+        max_tokens=512,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": full_prompt},
+        ],
+    )
+    STATS["calls"] += 1
+    STATS["provider"] = "openai"
+    if response.usage:
+        STATS["tokens_in"] += response.usage.prompt_tokens
+        STATS["tokens_out"] += response.usage.completion_tokens
+    return response.choices[0].message.content.strip()
+
+
+# ════════════════════════════════════════════════════════════════════════
+# API PUBLIQUE
+# ════════════════════════════════════════════════════════════════════════
+
+def analyze_incident(
+    incident_data: dict,
+    model: str | None = None,
+    use_cache: bool = True,
+    anonymize: bool = True,  # FORCÉ par défaut — RGPD permanent
+) -> dict[str, Any]:
+    """Analyse un incident via le LLM disponible (Claude prioritaire).
+
+    L'anonymisation est TOUJOURS activée (politique RGPD permanente).
+    Bascule automatique sur le mode dégradé si aucune clé valide.
+    """
+    # 1. Cache
+    if use_cache:
+        cached = cache.get(incident_data)
+        if cached is not None:
+            STATS["cache_hits"] += 1
+            STATS["tokens_saved_cache"] += 500
+            return cached
+
+    # 2. Anonymisation RGPD permanente
+    data_for_llm = anonymize_incident(incident_data)
+
+    # 3. Compression des logs
+    compressed = _compress_for_prompt(data_for_llm)
+    user_prompt = build_user_prompt(compressed)
+
+    # 4. Détection du provider et appel
+    provider = _detect_provider()
 
     try:
-        response = client.chat.completions.create(
-            model=model_name,
-            max_tokens=512,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": full_prompt},
-            ],
-        )
-        # Compter uniquement les appels qui ont réellement abouti
-        STATS["calls"] += 1
-        if response.usage:
-            STATS["tokens_in"] += response.usage.prompt_tokens
-            STATS["tokens_out"] += response.usage.completion_tokens
-        return response.choices[0].message.content.strip()
+        if provider == "claude":
+            result = _call_claude(user_prompt, model=model)
+        elif provider == "openai":
+            result = _call_openai(user_prompt, model=model)
+        else:
+            return fallback_analysis(incident_data)
+
+        if result is None:
+            return fallback_analysis(incident_data)
+
+        result["_fallback"] = False
+        result["_provider"] = provider
+
+        if use_cache:
+            cache.set(incident_data, result)
+        return result
+
     except Exception as e:
-        return f"[Erreur LLM] {e}"
+        result = fallback_analysis(incident_data)
+        result["_error"] = str(e)
+        result["_provider"] = provider
+        return result
+
+
+def chat(question: str, context: str = "", model: str | None = None) -> str:
+    """Mode conversationnel — bascule auto Claude → OpenAI → mode dégradé."""
+    provider = _detect_provider()
+
+    if provider == "fallback":
+        return ("[Mode dégradé] Aucune clé API configurée. "
+                "Définissez ANTHROPIC_API_KEY ou OPENAI_API_KEY dans .env.")
+
+    try:
+        if provider == "claude":
+            answer = _chat_claude(question, context, model)
+        elif provider == "openai":
+            answer = _chat_openai(question, context, model)
+        else:
+            answer = None
+
+        if answer is None:
+            return ("[Mode dégradé] Le module LLM n'est pas installé. "
+                    "Lancez : pip install anthropic openai")
+        return answer
+    except Exception as e:
+        return f"[Erreur {provider}] {e}"
 
 
 def get_stats() -> dict:

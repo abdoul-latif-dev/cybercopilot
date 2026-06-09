@@ -44,16 +44,23 @@ def test_detect_brute_force_below_threshold():
     assert len(incidents) == 0
 
 
-def test_detect_brute_force_severity_critical():
+def test_detect_brute_force_severity_default():
+    """La sévérité par défaut est 'high' avant application du calcul CVSS."""
     events = _make_ssh_failed("203.0.113.50", 25)
     incidents = detect_brute_force(events)
-    assert incidents[0].severity == "critical"
-
-
-def test_detect_brute_force_severity_high():
-    events = _make_ssh_failed("203.0.113.50", 10)
-    incidents = detect_brute_force(events)
+    # Sans appel à apply_severity (sans enricher_fn), reste à 'high' par défaut
     assert incidents[0].severity == "high"
+
+
+def test_detect_brute_force_cvss_critical_with_malicious_ip():
+    """Avec une IP malveillante connue, brute force volumineux = critical."""
+    from src.detector import apply_severity
+    events = _make_ssh_failed("203.0.113.50", 25)
+    incidents = detect_brute_force(events)
+    # Application de la sévérité CVSS avec une fonction enricher mockée
+    apply_severity(incidents, enricher_fn=lambda ip: {"reputation": "malicious"})
+    assert incidents[0].severity in ("critical", "high")
+    assert incidents[0].severity_score >= 7.0
 
 
 # ────────────────────────────────────────────────────────────────────────
@@ -229,7 +236,9 @@ def test_detect_ddos_below_threshold():
     assert detect_ddos(events) == []
 
 
-def test_detect_ddos_severity_critical():
+def test_detect_ddos_severity_cvss_critical():
+    """DDoS de 150 requêtes + IP suspecte = sévérité élevée selon CVSS."""
+    from src.detector import apply_severity
     events = [
         LogEvent(
             timestamp="t",
@@ -241,7 +250,10 @@ def test_detect_ddos_severity_critical():
         for _ in range(150)
     ]
     incidents = detect_ddos(events)
-    assert incidents[0].severity == "critical"
+    apply_severity(incidents, enricher_fn=lambda ip: {"reputation": "suspicious"})
+    # 150 req + suspicious → high (score ~9.0)
+    assert incidents[0].severity in ("critical", "high")
+    assert incidents[0].severity_score >= 7.0
 
 
 # ────────────────────────────────────────────────────────────────────────

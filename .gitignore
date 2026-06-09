@@ -14,3 +14,7 @@ venv/
 # Rapports exportés (option 11 du menu)
 rapport.md
 rapport-*.md
+
+# Backups nano de .env
+.env.save
+.env.save.*

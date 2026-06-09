@@ -1,3 +1,5 @@
+# LLM (priorité Claude, fallback OpenAI)
+anthropic>=0.40.0
 openai>=1.50.0
 python-dotenv>=1.0.0
 rich>=13.0.0
@@ -10,3 +12,6 @@ jinja2>=3.1.0
 python-multipart>=0.0.6
 bcrypt>=4.0.0
 itsdangerous>=2.1.0
+
+# Export PDF
+weasyprint>=60.0

@@ -59,7 +59,6 @@ def print_menu() -> None:
     table.add_row("11.", "📤 Exporter un rapport Markdown")
     table.add_row("12.", "🗑️  Supprimer un incident (RGPD)")
     table.add_row("13.", "🧹 Vider toute la base d'incidents")
-    table.add_row("14.", "🔐 Activer / désactiver l'anonymisation")
     table.add_row("0.", "🚪 Quitter")
 
     console.print(Panel(table, title="[bold]Menu principal[/bold]", border_style="blue"))
@@ -109,8 +108,8 @@ def analyze_log_file(filename: str, anonymize: bool) -> None:
         analysis = analyze_incident(data, anonymize=anonymize)
         incident_id = storage.save_incident(
             source_ip=incident.source_ip,
-            attack_type=analysis.get("attack_type", incident.attack_type),
-            severity=analysis.get("severity", incident.severity),
+            attack_type=incident.attack_type,   # CVSS — jamais écrasé par le LLM
+            severity=incident.severity,          # CVSS — jamais écrasé par le LLM
             summary=analysis.get("summary", ""),
             raw_logs=incident.sample_logs,
             recommendation=analysis.get("recommendations", []),
@@ -334,15 +333,7 @@ def action_purge() -> None:
     storage.close()
 
 
-def action_toggle_anonymize(state: dict) -> None:
-    state["anonymize"] = not state["anonymize"]
-    if state["anonymize"]:
-        console.print("\n[green]🔐 Anonymisation activée[/green]")
-        console.print(
-            "[dim]Les IP internes et noms d'utilisateur seront masqués avant envoi au LLM.[/dim]"
-        )
-    else:
-        console.print("\n[yellow]🔓 Anonymisation désactivée[/yellow]")
+# L'anonymisation RGPD est toujours active (forcée à True dans state)
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -350,14 +341,13 @@ def action_toggle_anonymize(state: dict) -> None:
 # ════════════════════════════════════════════════════════════════════════
 
 def main() -> None:
-    state = {"anonymize": False}
+    state = {"anonymize": True}  # FORCÉ : anonymisation toujours active (RGPD)
     print_banner()
 
     while True:
         print_menu()
-        anon_label = "[green]ON[/green]" if state["anonymize"] else "[dim]OFF[/dim]"
         choice = Prompt.ask(
-            f"\n[bold cyan]Votre choix[/bold cyan] [dim](anonymisation: {anon_label})[/dim]",
+            "\n[bold cyan]Votre choix[/bold cyan] [dim](🔐 RGPD : anonymisation permanente)[/dim]",
             default="0",
         ).strip()
 
@@ -390,8 +380,6 @@ def main() -> None:
             action_delete_incident()
         elif choice == "13":
             action_purge()
-        elif choice == "14":
-            action_toggle_anonymize(state)
         else:
             cli.print_error(f"Choix invalide : {choice}")
             continue

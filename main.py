@@ -61,8 +61,8 @@ def cmd_analyze(args) -> None:
 
         incident_id = storage.save_incident(
             source_ip=incident.source_ip,
-            attack_type=analysis.get("attack_type", incident.attack_type),
-            severity=analysis.get("severity", incident.severity),
+            attack_type=incident.attack_type,   # CVSS — jamais écrasé par le LLM
+            severity=incident.severity,          # CVSS — jamais écrasé par le LLM
             summary=analysis.get("summary", ""),
             raw_logs=incident.sample_logs,
             recommendation=analysis.get("recommendations", []),

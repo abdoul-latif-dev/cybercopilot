@@ -1,13 +1,113 @@
 {
-  "203.0.113.50": {"country": "Russie", "reputation": "malicious", "tags": ["bruteforce", "ssh"]},
-  "203.0.113.99": {"country": "Russie", "reputation": "malicious", "tags": ["sql_injection", "scanner"]},
-  "185.220.101.45": {"country": "Allemagne", "reputation": "malicious", "tags": ["tor_exit", "bruteforce", "sql_injection"]},
-  "45.142.212.61": {"country": "Pays-Bas", "reputation": "suspicious", "tags": ["scanner", "vps"]},
-  "45.142.99.10": {"country": "Pays-Bas", "reputation": "suspicious", "tags": ["botnet", "ddos"]},
-  "198.51.100.23": {"country": "France", "reputation": "unknown", "tags": []},
-  "198.51.100.42": {"country": "USA", "reputation": "suspicious", "tags": ["web_scanner"]},
-  "91.134.45.219": {"country": "Russie", "reputation": "malicious", "tags": ["bruteforce", "credential_stuffing"]},
-  "45.155.205.211": {"country": "Pays-Bas", "reputation": "malicious", "tags": ["bruteforce", "ssh", "vps"]},
-  "218.92.0.220": {"country": "Chine", "reputation": "malicious", "tags": ["apt", "bruteforce", "ssh"]},
-  "82.66.74.110": {"country": "France", "reputation": "internal", "tags": ["employe"]}
+  "203.0.113.50": {
+    "country": "Russie",
+    "reputation": "malicious",
+    "tags": [
+      "bruteforce",
+      "ssh"
+    ]
+  },
+  "203.0.113.99": {
+    "country": "Russie",
+    "reputation": "malicious",
+    "tags": [
+      "sql_injection",
+      "scanner"
+    ]
+  },
+  "185.220.101.45": {
+    "country": "Allemagne",
+    "reputation": "malicious",
+    "tags": [
+      "tor_exit",
+      "bruteforce",
+      "sql_injection"
+    ]
+  },
+  "45.142.212.61": {
+    "country": "Pays-Bas",
+    "reputation": "suspicious",
+    "tags": [
+      "scanner",
+      "vps"
+    ]
+  },
+  "45.142.99.10": {
+    "country": "Pays-Bas",
+    "reputation": "suspicious",
+    "tags": [
+      "botnet",
+      "ddos"
+    ]
+  },
+  "198.51.100.23": {
+    "country": "France",
+    "reputation": "unknown",
+    "tags": []
+  },
+  "198.51.100.42": {
+    "country": "USA",
+    "reputation": "suspicious",
+    "tags": [
+      "web_scanner"
+    ]
+  },
+  "91.134.45.219": {
+    "country": "Russie",
+    "reputation": "malicious",
+    "tags": [
+      "bruteforce",
+      "credential_stuffing"
+    ]
+  },
+  "45.155.205.211": {
+    "country": "Pays-Bas",
+    "reputation": "malicious",
+    "tags": [
+      "bruteforce",
+      "ssh",
+      "vps"
+    ]
+  },
+  "218.92.0.220": {
+    "country": "Chine",
+    "reputation": "malicious",
+    "tags": [
+      "apt",
+      "bruteforce",
+      "ssh"
+    ]
+  },
+  "82.66.74.110": {
+    "country": "France",
+    "reputation": "internal",
+    "tags": [
+      "employe"
+    ]
+  },
+  "185.143.223.47": {
+    "country": "Russie",
+    "reputation": "malicious",
+    "tags": [
+      "bruteforce",
+      "credential_stuffing"
+    ]
+  },
+  "194.169.175.35": {
+    "country": "Pays-Bas",
+    "reputation": "malicious",
+    "tags": [
+      "tor_exit",
+      "bruteforce"
+    ]
+  },
+  "121.4.21.180": {
+    "country": "Chine",
+    "reputation": "malicious",
+    "tags": [
+      "apt",
+      "bruteforce",
+      "ssh"
+    ]
+  }
 }

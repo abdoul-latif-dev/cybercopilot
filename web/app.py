@@ -206,48 +206,168 @@ def chat_clear(request: Request, user: dict = Depends(get_current_user)):
     return RedirectResponse("/chat", status_code=303)
 
 
+def _build_report_html(user: dict, incidents: list) -> str:
+    """Construit le HTML du rapport SOC stylisé."""
+    from datetime import datetime
+    sev_color = {
+        "critical": "#EF4444",
+        "high": "#F97316",
+        "medium": "#EAB308",
+        "low": "#22C55E",
+    }
+    sev_label = {
+        "critical": "🔴 CRITIQUE",
+        "high": "🟠 ÉLEVÉ",
+        "medium": "🟡 MOYEN",
+        "low": "🟢 FAIBLE",
+    }
+    rows = []
+    for inc in incidents:
+        recos = json.loads(inc["recommendation"]) if inc.get("recommendation") else []
+        recos_html = "".join(f"<li>{r}</li>" for r in recos)
+        color = sev_color.get(inc["severity"], "#94A3B8")
+        label = sev_label.get(inc["severity"], inc["severity"].upper())
+        status = inc.get("status") or "pending"
+        status_label = {
+            "pending": "⏳ En attente",
+            "handled": "✅ Traité",
+            "false_positive": "❌ Faux positif",
+            "skipped": "⏭️ Passé",
+        }.get(status, status)
+        rows.append(f"""
+<div style="border-left:4px solid {color};padding:18px;margin:16px 0;background:#F8FAFC;border-radius:6px;page-break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+    <h3 style="margin:0;color:#0F1729;font-size:16pt">Incident #{inc['id']} — {inc['attack_type']}</h3>
+    <span style="background:{color};color:#fff;padding:3px 10px;border-radius:12px;font-size:9pt;font-weight:bold">{label}</span>
+  </div>
+  <table style="font-size:10pt;color:#475569;margin-bottom:12px">
+    <tr><td style="padding:2px 8px 2px 0"><b>Statut :</b></td><td>{status_label}</td></tr>
+    <tr><td style="padding:2px 8px 2px 0"><b>IP source :</b></td><td><code>{inc['source_ip']}</code></td></tr>
+    <tr><td style="padding:2px 8px 2px 0"><b>Date :</b></td><td>{inc['timestamp'][:19]}</td></tr>
+  </table>
+  <div style="background:#fff;padding:12px;border-radius:4px;margin-bottom:12px">
+    <div style="font-size:9pt;color:#06B6D4;font-weight:bold;margin-bottom:4px;text-transform:uppercase">Résumé</div>
+    <div style="font-size:10pt">{inc['summary']}</div>
+  </div>
+  <div>
+    <div style="font-size:9pt;color:#06B6D4;font-weight:bold;margin-bottom:4px;text-transform:uppercase">Actions recommandées</div>
+    <ol style="font-size:10pt;margin:4px 0 0 20px;padding:0">{recos_html}</ol>
+  </div>
+</div>
+""")
+    today = datetime.now().strftime("%d/%m/%Y à %H:%M")
+    if not incidents:
+        synthese = "<p>Aucun incident enregistré.</p>"
+    else:
+        synthese = (
+            f"<p>Le présent rapport présente {len(incidents)} incident(s) "
+            "détecté(s) et analysé(s) par l'assistant CyberCopilot. Chaque "
+            "incident a été classé selon le standard CVSS 3.1 et accompagné "
+            "de recommandations d'action priorisées.</p>"
+        )
+    detail = "".join(rows) if rows else (
+        '<p style="color:#64748B;font-style:italic">Aucun incident à afficher.</p>'
+    )
+    user_label = user.get("full_name") or user["email"]
+    return f"""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><title>Rapport SOC — CyberCopilot</title>
+<style>
+@page {{ size: A4; margin: 1.5cm 2cm 2cm 2cm; @bottom-center {{ content: counter(page) " / " counter(pages); font-size: 9pt; color: #64748B; }} }}
+body {{ font-family: -apple-system, 'Segoe UI', sans-serif; color: #0F1729; }}
+h1 {{ color: #0F1729; border-bottom: 3px solid #06B6D4; padding-bottom: 10px; }}
+h2 {{ color: #06B6D4; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px; margin-top: 30px; }}
+.meta {{ background: #F1F5F9; padding: 12px 16px; border-radius: 6px; font-size: 10pt; margin-bottom: 24px; }}
+.meta b {{ color: #0F1729; }}
+.footer-note {{ text-align: center; font-size: 9pt; color: #64748B; margin-top: 40px; }}
+</style>
+</head>
+<body>
+<h1>🛡️ Rapport d'incidents SOC — CyberCopilot</h1>
+<div class="meta">
+  <b>Analyste :</b> {user_label}<br>
+  <b>Email :</b> {user['email']}<br>
+  <b>Date de génération :</b> {today}<br>
+  <b>Nombre d'incidents :</b> {len(incidents)}<br>
+  <b>Conformité :</b> Données anonymisées (RGPD) — Permissions chmod 600
+</div>
+
+<h2>Synthèse</h2>
+{synthese}
+
+<h2>Détail des incidents</h2>
+{detail}
+
+<div class="footer-note">
+  Document généré par CyberCopilot — Projet B2 2026<br>
+  github.com/abdoul-latif-dev/cybercopilot
+</div>
+</body></html>"""
+
+
 @app.get("/export")
 def export_report(
     request: Request,
-    fmt: str = "markdown",
+    fmt: str = "pdf",
     user: dict = Depends(get_current_user),
 ):
-    """Exporte un rapport Markdown de tous les incidents de l'utilisateur."""
-    incidents = db.list_incidents_for_user(user["id"])
-    lines = [
-        f"# Rapport d'incidents SOC — {user.get('full_name') or user['email']}",
-        "",
-        f"Généré pour : **{user['email']}**",
-        f"Nombre d'incidents : **{len(incidents)}**",
-        "",
-        "---",
-        "",
-    ]
-    for inc in incidents:
-        recos = json.loads(inc["recommendation"]) if inc.get("recommendation") else []
-        lines.append(f"## Incident #{inc['id']} — {inc['attack_type']}")
-        lines.append(f"- **Sévérité :** {inc['severity']}")
-        lines.append(f"- **Statut :** {inc.get('status') or 'pending'}")
-        lines.append(f"- **IP source :** {inc['source_ip']}")
-        lines.append(f"- **Date :** {inc['timestamp']}")
-        lines.append("")
-        lines.append(f"**Résumé :** {inc['summary']}")
-        lines.append("")
-        lines.append("**Actions recommandées :**")
-        for r in recos:
-            lines.append(f"- {r}")
-        lines.append("")
-        lines.append("---")
-        lines.append("")
+    """Exporte le rapport au format PDF (par défaut) ou Markdown.
 
-    content = "\n".join(lines)
+    L'URL /export?fmt=md permet de récupérer la version Markdown.
+    """
     from fastapi.responses import Response
-    filename = f"rapport-soc-{user['email'].split('@')[0]}.md"
-    return Response(
-        content=content,
-        media_type="text/markdown",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    incidents = db.list_incidents_for_user(user["id"])
+    username = user["email"].split("@")[0]
+
+    if fmt.lower() in ("md", "markdown"):
+        # Version Markdown (fallback)
+        lines = [
+            f"# Rapport d'incidents SOC — {user.get('full_name') or user['email']}",
+            "",
+            f"Généré pour : **{user['email']}**",
+            f"Nombre d'incidents : **{len(incidents)}**",
+            "",
+            "---",
+            "",
+        ]
+        for inc in incidents:
+            recos = json.loads(inc["recommendation"]) if inc.get("recommendation") else []
+            lines.append(f"## Incident #{inc['id']} — {inc['attack_type']}")
+            lines.append(f"- **Sévérité :** {inc['severity']}")
+            lines.append(f"- **Statut :** {inc.get('status') or 'pending'}")
+            lines.append(f"- **IP source :** {inc['source_ip']}")
+            lines.append(f"- **Date :** {inc['timestamp']}")
+            lines.append("")
+            lines.append(f"**Résumé :** {inc['summary']}")
+            lines.append("")
+            lines.append("**Actions recommandées :**")
+            for r in recos:
+                lines.append(f"- {r}")
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+        return Response(
+            content="\n".join(lines),
+            media_type="text/markdown",
+            headers={"Content-Disposition": f'attachment; filename="rapport-soc-{username}.md"'},
+        )
+
+    # PDF par défaut
+    html = _build_report_html(user, incidents)
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html).write_pdf()
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="rapport-soc-{username}.pdf"'},
+        )
+    except ImportError:
+        # Fallback Markdown si weasyprint indisponible
+        return Response(
+            content=html,
+            media_type="text/html",
+            headers={"Content-Disposition": f'attachment; filename="rapport-soc-{username}.html"'},
+        )
 
 
 @app.get("/settings", response_class=HTMLResponse)
@@ -298,9 +418,12 @@ def upload_page(request: Request, user: dict = Depends(get_current_user)):
 async def upload_analyze(
     request: Request,
     file: UploadFile = File(...),
-    anonymize: str = Form(""),
     user: dict = Depends(get_current_user),
 ):
+    """Upload + analyse simultanée de TOUS les types d'attaque.
+
+    L'anonymisation RGPD est TOUJOURS appliquée (politique permanente).
+    """
     content = await file.read()
     if not content:
         return render(request, "upload.html", user=user, error="Fichier vide", result=None)
@@ -316,8 +439,10 @@ async def upload_analyze(
 
     try:
         events = parse_file(tmp_path)
-        incidents = detect_all(events)
-        anon = bool(anonymize)
+        # detect_all() applique TOUTES les détections (brute force, SQLi, scan, DDoS,
+        # admin, horaire) en simultané + calcul de sévérité CVSS avec réputation IP
+        incidents = detect_all(events, enricher_fn=enrich)
+        anon = True  # RGPD permanent — non négociable
 
         saved = []
         for incident in incidents:
@@ -325,6 +450,8 @@ async def upload_analyze(
             data = {
                 "source_ip": incident.source_ip,
                 "attack_type": incident.attack_type,
+                "severity": incident.severity,
+                "severity_score": incident.severity_score,
                 "count": incident.count,
                 "users": incident.users,
                 "targets": incident.targets,
@@ -336,11 +463,14 @@ async def upload_analyze(
                 "tags": info["tags"],
             }
             analysis = analyze_incident(data, anonymize=anon)
+            # ⚠️ La sévérité CVSS et le type d'attaque restent ceux du DÉTECTEUR
+            # (basés sur le standard CVSS 3.1 et les règles fixes).
+            # Le LLM ne fournit que le résumé et les recommandations.
             incident_id = db.save_incident_for_user(
                 user_id=user["id"],
                 source_ip=incident.source_ip,
-                attack_type=analysis.get("attack_type", incident.attack_type),
-                severity=analysis.get("severity", incident.severity),
+                attack_type=incident.attack_type,           # ← jamais écrasé
+                severity=incident.severity,                  # ← jamais écrasé
                 summary=analysis.get("summary", ""),
                 raw_logs=incident.sample_logs,
                 recommendation=analysis.get("recommendations", []),
@@ -350,7 +480,7 @@ async def upload_analyze(
                 "type": incident.attack_type,
                 "ip": incident.source_ip,
                 "country": info["country"],
-                "severity": analysis.get("severity"),
+                "severity": incident.severity,
                 "summary": analysis.get("summary"),
             })
 
