@@ -9,7 +9,7 @@ from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.exceptions import StarletteHTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -131,6 +131,7 @@ def dashboard(
     severity: str | None = None,
     status: str | None = None,
     attack: str | None = None,
+    just_uploaded: int | None = None,
     user: dict = Depends(get_current_user),
 ):
     all_incidents = db.list_incidents_for_user(user["id"])
@@ -144,11 +145,15 @@ def dashboard(
         incidents = [i for i in incidents if i.get("attack_type") == attack]
     stats = db.stats_for_user(user["id"])
     attack_types = sorted({i.get("attack_type") for i in all_incidents if i.get("attack_type")})
+    # Compte les incidents en attente d'analyse Claude (summary vide)
+    pending_count = sum(1 for i in all_incidents if not (i.get("summary") or "").strip())
     return render(
         request, "dashboard.html",
         user=user, incidents=incidents, stats=stats,
         attack_types=attack_types,
         current_filters={"severity": severity, "status": status, "attack": attack},
+        pending_count=pending_count,
+        just_uploaded=just_uploaded,
     )
 
 
@@ -415,20 +420,44 @@ def upload_page(request: Request, user: dict = Depends(get_current_user)):
     return render(request, "upload.html", user=user, result=None, error=None)
 
 
+def _analyze_pending_in_background(incidents_data: list[dict]) -> None:
+    """Tâche d'arrière-plan : appelle Claude pour chaque incident sauvegardé,
+    puis met à jour la DB avec le résumé et les recommandations.
+
+    Lancée APRÈS l'envoi de la réponse HTTP — donc immune au timeout Render.
+    """
+    for data in incidents_data:
+        incident_id = data.pop("_incident_id")
+        try:
+            analysis = analyze_incident(data, anonymize=True)
+            db.update_incident_analysis(
+                incident_id=incident_id,
+                summary=analysis.get("summary", "Analyse non disponible."),
+                recommendation=analysis.get("recommendations", []),
+            )
+        except Exception as e:
+            db.update_incident_analysis(
+                incident_id=incident_id,
+                summary=f"Analyse échouée : {str(e)[:100]}",
+                recommendation=[],
+            )
+
+
 @app.post("/upload", response_class=HTMLResponse)
 async def upload_analyze(
     request: Request,
+    background_tasks: BackgroundTasks,
     content_b64: str = Form(""),
     filename: str = Form("upload.log"),
     user: dict = Depends(get_current_user),
 ):
-    """Upload + analyse simultanée de TOUS les types d'attaque.
+    """Upload + détection synchrone, analyse Claude en arrière-plan.
+
+    Évite le timeout HTTP de Render (100s) : on sauve les incidents avec
+    `summary=""` immédiatement et l'analyse LLM se fait en BackgroundTask.
 
     L'anonymisation RGPD est TOUJOURS appliquée (politique permanente).
-
-    Le contenu du fichier est envoyé en base64 (champ `content_b64`) pour
-    contourner les WAF qui bloqueraient les patterns d'attaque présents dans
-    les logs analysés (SQLi, brute force, etc.).
+    Le contenu du fichier est envoyé en base64 pour contourner le WAF.
     """
     import base64
     try:
@@ -450,15 +479,24 @@ async def upload_analyze(
 
     try:
         events = parse_file(tmp_path)
-        # detect_all() applique TOUTES les détections (brute force, SQLi, scan, DDoS,
-        # admin, horaire) en simultané + calcul de sévérité CVSS avec réputation IP
+        # Détection CVSS — synchrone et rapide (millisecondes)
         incidents = detect_all(events, enricher_fn=enrich)
-        anon = True  # RGPD permanent — non négociable
 
-        saved = []
+        # Sauvegarde immédiate avec summary="" → marqueur "analyse en cours"
+        pending_data = []
         for incident in incidents:
             info = enrich(incident.source_ip)
-            data = {
+            incident_id = db.save_incident_for_user(
+                user_id=user["id"],
+                source_ip=incident.source_ip,
+                attack_type=incident.attack_type,
+                severity=incident.severity,
+                summary="",  # ← vide = en attente d'analyse Claude
+                raw_logs=incident.sample_logs,
+                recommendation=[],
+            )
+            pending_data.append({
+                "_incident_id": incident_id,
                 "source_ip": incident.source_ip,
                 "attack_type": incident.attack_type,
                 "severity": incident.severity,
@@ -472,34 +510,16 @@ async def upload_analyze(
                 "country": info["country"],
                 "reputation": info["reputation"],
                 "tags": info["tags"],
-            }
-            analysis = analyze_incident(data, anonymize=anon)
-            # ⚠️ La sévérité CVSS et le type d'attaque restent ceux du DÉTECTEUR
-            # (basés sur le standard CVSS 3.1 et les règles fixes).
-            # Le LLM ne fournit que le résumé et les recommandations.
-            incident_id = db.save_incident_for_user(
-                user_id=user["id"],
-                source_ip=incident.source_ip,
-                attack_type=incident.attack_type,           # ← jamais écrasé
-                severity=incident.severity,                  # ← jamais écrasé
-                summary=analysis.get("summary", ""),
-                raw_logs=incident.sample_logs,
-                recommendation=analysis.get("recommendations", []),
-            )
-            saved.append({
-                "id": incident_id,
-                "type": incident.attack_type,
-                "ip": incident.source_ip,
-                "country": info["country"],
-                "severity": incident.severity,
-                "summary": analysis.get("summary"),
             })
 
-        return render(
-            request, "upload.html",
-            user=user,
-            result={"filename": filename, "events": len(events), "incidents": saved},
-            error=None,
+        # Lance l'analyse Claude après l'envoi de la réponse HTTP
+        if pending_data:
+            background_tasks.add_task(_analyze_pending_in_background, pending_data)
+
+        # Redirige immédiatement vers le dashboard
+        return RedirectResponse(
+            f"/dashboard?just_uploaded={len(pending_data)}",
+            status_code=303,
         )
     finally:
         tmp_path.unlink(missing_ok=True)

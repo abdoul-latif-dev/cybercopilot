@@ -91,6 +91,24 @@ def delete_incident_for_user(user_id: int, incident_id: int) -> bool:
         conn.close()
 
 
+def update_incident_analysis(
+    incident_id: int, summary: str, recommendation: list
+) -> bool:
+    """Met à jour le résumé et les recommandations d'un incident une fois
+    l'analyse Claude terminée. Utilisé par le BackgroundTask d'analyse async.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cursor = conn.execute(
+            "UPDATE incidents SET summary = ?, recommendation = ? WHERE id = ?",
+            (summary, json.dumps(recommendation, ensure_ascii=False), incident_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
 def update_status_for_user(
     user_id: int, incident_id: int, status: str, note: str = ""
 ) -> bool:

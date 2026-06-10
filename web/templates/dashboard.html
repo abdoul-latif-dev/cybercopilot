@@ -14,6 +14,23 @@
     </a>
   </div>
 
+  {% if just_uploaded %}
+  <div class="bg-cyan-50 border-l-4 border-cyan-500 text-cyan-800 px-6 py-4 rounded mb-4">
+    ✅ <b>{{ just_uploaded }} incident(s) détecté(s)</b> et classés par sévérité CVSS.
+    L'analyse Claude (résumés et recommandations) tourne en arrière-plan.
+  </div>
+  {% endif %}
+
+  {% if pending_count and pending_count > 0 %}
+  <div class="bg-amber-50 border-l-4 border-amber-500 text-amber-800 px-6 py-4 rounded mb-4 flex items-center gap-3">
+    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600"></div>
+    <div>
+      🔄 <b>Analyse Claude en cours</b> sur {{ pending_count }} incident(s).
+      La page se rafraîchit automatiquement toutes les 5 secondes.
+    </div>
+  </div>
+  {% endif %}
+
   <!-- STATS CARDS -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     <div class="bg-white rounded-xl shadow p-6 border-l-4 border-cyber-500">
@@ -121,7 +138,14 @@
                 <span class="text-yellow-600 text-sm">⏳ En attente</span>
               {% endif %}
             </td>
-            <td class="px-6 py-4 font-mono text-sm">{{ inc.attack_type }}</td>
+            <td class="px-6 py-4 font-mono text-sm">
+              {{ inc.attack_type }}
+              {% if not (inc.summary or '').strip() %}
+              <span class="ml-2 inline-flex items-center gap-1 text-xs text-amber-700">
+                <span class="animate-pulse">🔄</span> Analyse…
+              </span>
+              {% endif %}
+            </td>
             <td class="px-6 py-4 font-mono text-sm text-purple-700">{{ inc.source_ip }}</td>
             <td class="px-6 py-4 text-sm text-slate-500">{{ inc.timestamp[:16] }}</td>
             <td class="px-6 py-4 text-right">
@@ -144,5 +168,12 @@
   </div>
 
 </div>
+
+{% if pending_count and pending_count > 0 %}
+<script>
+// Auto-refresh tant qu'il reste des incidents en cours d'analyse Claude
+setTimeout(function() { window.location.reload(); }, 5000);
+</script>
+{% endif %}
 
 {% endblock %}
