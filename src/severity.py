@@ -114,17 +114,22 @@ def compute_severity(
     else:
         base_score = 3.0
 
+    # Bonus AVANT le multiplicateur — pour que le contexte (IP interne, IP malveillante)
+    # s'applique aussi aux bonus has_success et targets_admin.
+    if has_success and attack_type in ("brute_force_ssh", "anomalous_hour"):
+        base_score += 1.5
+    if targets_admin:
+        base_score += 0.5
+
     # Boost de réputation IP
     multiplier = REPUTATION_BOOST.get(reputation, 1.0)
     score = base_score * multiplier
 
-    # Compromission confirmée (connexion réussie) — +1.5 points
-    if has_success and attack_type in ("brute_force_ssh", "anomalous_hour"):
-        score += 1.5
-
-    # Cible des comptes administratifs — +0.5 point
-    if targets_admin:
-        score += 0.5
+    # FLOOR pour IPs malveillantes connues : toute attaque réelle depuis une IP
+    # confirmée malveillante par la threat intel est au moins ÉLEVÉE (CVSS ≥ 7.0).
+    # Une IP marquée "malicious" + n'importe quelle anomalie = signal très fort.
+    if reputation == "malicious":
+        score = max(score, 7.0)
 
     # Clamp 0-10
     score = max(0.0, min(10.0, score))
