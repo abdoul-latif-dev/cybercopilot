@@ -512,9 +512,15 @@ async def upload_analyze(
                 "tags": info["tags"],
             })
 
-        # Lance l'analyse Claude après l'envoi de la réponse HTTP
+        # En PRODUCTION : analyse en BackgroundTask (évite le timeout HTTP 100s de Render).
+        # En LOCAL : analyse synchrone — pas de risque de timeout, on remplit les
+        # summaries avant de répondre. Le dashboard affichera les analyses directement,
+        # sans bandeau "en cours" ni auto-refresh inutile.
         if pending_data:
-            background_tasks.add_task(_analyze_pending_in_background, pending_data)
+            if IS_PRODUCTION:
+                background_tasks.add_task(_analyze_pending_in_background, pending_data)
+            else:
+                _analyze_pending_in_background(pending_data)
 
         # Redirige immédiatement vers le dashboard
         return RedirectResponse(

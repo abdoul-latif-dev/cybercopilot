@@ -18,3 +18,7 @@ rapport-*.md
 # Backups nano de .env
 .env.save
 .env.save.*
+
+# Cache LLM local (contient des analyses de vrais logs)
+data/llm_cache.json
+data/*.cache

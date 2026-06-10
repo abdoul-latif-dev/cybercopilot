@@ -59,14 +59,17 @@ L'objectif n'est pas de remplacer l'analyste, mais de lui fournir un **copilote*
 
 ---
 
-## 🌐 Interface web (NEW)
+## 🌐 Interface web
 
-Une web app avec authentification multi-utilisateur est disponible :
+Une web app avec authentification multi-utilisateur est disponible.
 
+**Démo en ligne** : https://cybercopilot.onrender.com (peut mettre 30 sec à se réveiller — free tier)
+
+**Lancement local** :
 ```bash
 pip install -r requirements.txt
-cp .env.example .env
-python web/app.py
+cp .env.example .env  # puis ajoute ta clé Claude
+uvicorn web.app:app --host 127.0.0.1 --port 8000
 # → http://localhost:8000
 ```
 
@@ -92,7 +95,7 @@ python web/app.py
 ### Installation
 
 ```bash
-git clone https://github.com/VOTRE-USER/cybercopilot.git
+git clone https://github.com/abdoul-latif-dev/cybercopilot.git
 cd cybercopilot
 pip install -r requirements.txt
 cp .env.example .env
@@ -100,12 +103,19 @@ cp .env.example .env
 
 ### Configuration
 
-Éditez le fichier `.env` et ajoutez votre clé API :
+Éditez le fichier `.env` et ajoutez votre clé API (Claude **ou** OpenAI) :
 
 ```bash
-OPENAI_API_KEY=sk-proj-votre-cle-ici
-LLM_MODEL=gpt-4o-mini
+# Recommandé — Claude
+ANTHROPIC_API_KEY=sk-ant-api03-votre-cle-ici
+LLM_MODEL=claude-sonnet-4-5
+
+# Ou en alternative — OpenAI
+# OPENAI_API_KEY=sk-proj-votre-cle-ici
+# LLM_MODEL=gpt-4o-mini
 ```
+
+Obtenez une clé Claude gratuite sur https://console.anthropic.com.
 
 > 💡 **Sans clé API**, le projet fonctionne en **mode dégradé** : les détections sont effectuées par règles statiques, et les résumés sont générés à partir de templates.
 
